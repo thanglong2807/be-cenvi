@@ -1,0 +1,29 @@
+[{
+  "last_id": 1,
+  "items": [
+    {
+      "code": "ca",
+      "name": "ads",
+      "mst": "123123",
+      "emails": [
+        "ádasd"
+      ],
+      "id": 1
+    }
+  ]
+},
+{
+  "last_id": 2,
+  "items": [
+    {
+      "id": 1,
+      "company_code": "2025KH01",
+      "company_name": "CÔNG TY ABC",
+      "manager_employee_id": 1,
+      "root_folder_id": "1AbcDriveID",
+      "year": 2025,
+      "template": "STANDARD"
+    }
+  ]
+}
+]

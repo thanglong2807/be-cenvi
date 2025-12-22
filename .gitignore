@@ -1,0 +1,51 @@
+# ==================================
+# 1. PYTHON SYSTEM FILES
+# ==================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# ==================================
+# 2. VIRTUAL ENVIRONMENTS (Môi trường ảo)
+# ==================================
+venv/
+env/
+.venv/
+.env/
+
+# ==================================
+# 3. SECRETS & CONFIG (QUAN TRỌNG - KHÔNG UP LÊN GIT)
+# ==================================
+.env
+.env.prod
+.env.dev
+.env.local
+
+# Google Drive Credentials
+credentials.json
+client_secret.json
+token.json
+service_account.json
+
+# ==================================
+# 4. IDE / EDITOR SETTINGS
+# ==================================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ==================================
+# 5. OS FILES (File rác hệ điều hành)
+# ==================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==================================
+# 6. LOGS & DATABASES
+# ==================================
+*.log
+*.sqlite
+logs/
