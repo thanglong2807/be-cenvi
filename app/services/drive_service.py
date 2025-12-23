@@ -6,14 +6,14 @@ from googleapiclient.discovery import build
 
 # Các biến môi trường hoặc config credential
 SCOPES = ['https://www.googleapis.com/auth/drive']
-SERVICE_ACCOUNT_FILE = 'credentials/service_account.json' # hoặc lấy từ env
+SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE") # hoặc lấy từ env
 
 def get_drive_service():
     """
     Khởi tạo Google Drive Service sử dụng Service Account
     """
     # 1. Lấy đường dẫn file JSON từ .env
-    creds_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
+    creds_path = SERVICE_ACCOUNT_FILE
 
     if not creds_path or not os.path.exists(creds_path):
         raise FileNotFoundError(f"Không tìm thấy file credentials tại: {creds_path}. Hãy kiểm tra file .env")
