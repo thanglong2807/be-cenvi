@@ -1,0 +1,98 @@
+# app/data/employees.py
+
+# Dữ liệu thô y hệt bạn cung cấp
+EMPLOYEES_DATA = {
+  "last_id": 10,
+  "items": [
+    {
+      "name": "Phùng Duy Anh",
+      "title": "Giám đốc",
+      "email": "nhan.phan@cenvi.vn",
+      "status": "active",
+      "created_at": "2025-12-23T10:39:15.123456",
+      "updated_at": "2025-12-23T10:39:15.123456",
+      "id": 1
+    },
+    {
+      "name": "Nguyễn Thị Liên",
+      "title": "Giám đốc",
+      "email": "lien.nguyen@cenvi.vn",
+      "status": "active",
+      "created_at": "2025-12-23T10:39:15.123456",
+      "updated_at": "2025-12-23T10:39:15.123456",
+      "id": 2
+    },
+    {
+      "name": "Trần Thị Mai Phương",
+      "title": "Nhân viên",
+      "email": "phuong.tran.cenvi@gmail.com",
+      "status": "active",
+      "created_at": "2025-12-23T10:39:15.123456",
+      "updated_at": "2025-12-23T10:39:15.123456",
+      "id": 3
+    },
+    {
+      "name": "Vương Cẩm Vân",
+      "title": "Nhân viên",
+      "email": "van.vuong.cenvi@gmail.com",
+      "status": "active",
+      "created_at": "2025-12-23T10:39:15.123456",
+      "updated_at": "2025-12-23T10:39:15.123456",
+      "id": 4
+    },
+    {
+      "name": "Đỗ Thị Hồng Nhung",
+      "title": "Nhân viên",
+      "email": "nhungdo.cenvi@gmail.com",
+      "status": "active",
+      "created_at": "2025-12-23T10:39:15.123456",
+      "updated_at": "2025-12-23T10:39:15.123456",
+      "id": 5
+    },
+    {
+      "name": "Hoàng Nhật Minh",
+      "title": "Nhân viên",
+      "email": "minh66tk@gmail.com",
+      "status": "active",
+      "created_at": "2025-12-23T10:39:15.123456",
+      "updated_at": "2025-12-23T10:39:15.123456",
+      "id": 6
+    },
+    {
+      "name": "Nguyễn Quỳnh Anh",
+      "title": "Nhân viên",
+      "email": "qanh110603@gmail.com",
+      "status": "active",
+      "created_at": "2025-12-23T10:39:15.123456",
+      "updated_at": "2025-12-23T10:39:15.123456",
+      "id": 7
+    },
+    {
+      "name": "Trần Đình Khôi",
+      "title": "Nhân viên",
+      "email": "trankhoi.forwork@gmail.com",
+      "status": "active",
+      "created_at": "2025-12-23T10:39:15.123456",
+      "updated_at": "2025-12-23T10:39:15.123456",
+      "id": 8
+    },
+    {
+      "name": "Nguyễn Thị Hồng",
+      "title": "Nhân viên",
+      "email": "hongnt901@gmail.com",
+      "status": "active",
+      "created_at": "2025-12-23T10:39:15.123456",
+      "updated_at": "2025-12-23T10:39:15.123456",
+      "id": 9
+    },
+    {
+      "name": "Nguyễn Lan Anh",
+      "title": "Kế toán nội bộ",
+      "email": "nguyenlananh2974@gmail.com",
+      "status": "active",
+      "created_at": "2025-12-23T10:39:15.123456",
+      "updated_at": "2025-12-23T10:39:15.123456",
+      "id": 10
+    }
+  ]
+}
