@@ -22,3 +22,23 @@ class FolderResponse(BaseModel):
     root_folder_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+class FolderBase(BaseModel):
+    company_code: str
+    company_name: str
+    mst: str
+    year: int
+    template: str
+    manager_employee_id: int
+
+class FolderCreate(FolderBase):
+    pass
+
+class FolderUpdate(BaseModel):
+    # Tất cả để Optional để cho phép sửa từng phần
+    company_code: Optional[str] = None
+    company_name: Optional[str] = None
+    mst: Optional[str] = None
+    year: Optional[int] = None
+    template: Optional[str] = None
+    manager_employee_id: Optional[int] = None
