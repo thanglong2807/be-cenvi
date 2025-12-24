@@ -5,7 +5,7 @@ from app.services.drive_folder_builder import apply_template
 from app.db.repositories.folder_repo import FolderRepository
 from app.db.repositories.employee_repo import EmployeeRepository
 from app.core.folder_templates import FOLDER_TEMPLATES
-
+from googleapiclient.errors import HttpError
 # ========= LOAD ENV =========
 ROOT_DRIVE_FOLDER_ID = os.getenv("COMPANY_PARENT_FOLDER_ID")
 if not ROOT_DRIVE_FOLDER_ID:
@@ -232,3 +232,191 @@ def delete_folder(folder_id: int):
     # 3. Xóa trong Database
     result = folder_repo.delete(folder_id)
     return result
+
+
+
+# app/services/folder_service.py
+
+# ... (Các import cũ giữ nguyên) ...
+
+# ========================================================
+# HELPER: ĐẾM FILE (MỚI THÊM)
+# ========================================================
+def _count_items_in_folder(service, folder_id: str) -> int:
+    """
+    Đếm số lượng item (file + folder) nằm trong folder_id.
+    Lấy tối đa 1000 item (để tối ưu tốc độ, không loop trang).
+    """
+    try:
+        query = f"'{folder_id}' in parents and trashed=false"
+        # Chỉ lấy field id để payload nhẹ nhất có thể
+        results = service.files().list(
+            q=query,
+            pageSize=1000, # Đếm tối đa 1000 file đầu tiên
+            fields="files(id)", 
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute()
+        
+        files = results.get("files", [])
+        return len(files)
+    except Exception:
+        return 0
+
+# ========================================================
+# HELPER: DỊCH TÊN QUYỀN (Thêm hàm này vào file)
+# ========================================================
+def _map_role_name(role_code):
+    """
+    Map role code của Google sang tiếng Việt dễ hiểu hơn
+    """
+    mapping = {
+        "organizer": "Quản lý (Manager)",
+        "fileOrganizer": "QL Nội dung (Content Manager)",
+        "writer": "Chỉnh sửa (Contributor)",
+        "commenter": "Nhận xét",
+        "reader": "Người xem (Viewer)",
+        "owner": "Chủ sở hữu"
+    }
+    # Nếu không tìm thấy trong map thì trả về nguyên gốc
+    return mapping.get(role_code, role_code)
+
+
+# ========================================================
+# HELPER: LẤY THÔNG TIN LIVE TỪ DRIVE (ĐÃ UPDATE)
+# ========================================================
+def _fetch_drive_info(root_folder_id: str):
+    """
+    Hàm nội bộ: 
+    1. Lấy Permissions
+    2. Lấy Sub-folders
+    3. Đếm số file trong từng Sub-folder (Logic mới)
+    """
+    if not root_folder_id:
+        return {"permissions": [], "sub_folders": []}
+
+    try:
+        service = get_drive_service()
+        
+        # --- 1. Lấy danh sách quyền (Permissions) ---
+        perm_results = service.permissions().list(
+            fileId=root_folder_id,
+            fields="permissions(id, emailAddress, role, displayName, type)",
+            supportsAllDrives=True
+        ).execute()
+        
+        mapped_perms = []
+        for p in perm_results.get("permissions", []):
+            if p.get("type") in ["user", "group"]: 
+                mapped_perms.append({
+                    "name": p.get("displayName", "Unknown"),
+                    "email": p.get("emailAddress", ""),
+                    "role": p.get("role"),
+                    "role_display": _map_role_name(p.get("role"))
+                })
+
+        # --- 2. Lấy danh sách Folder con ---
+        query = f"'{root_folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        file_results = service.files().list(
+            q=query,
+            fields="files(id, name, createdTime, webViewLink)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            pageSize=50
+        ).execute()
+        
+        sub_folders = file_results.get("files", [])
+
+        # --- 3. Đếm số file trong từng folder con (LOGIC MỚI) ---
+        # Loop qua từng folder con để đếm
+        for folder in sub_folders:
+            f_id = folder.get("id")
+            # Gọi hàm đếm
+            count = _count_items_in_folder(service, f_id)
+            folder["file_count"] = count  # Gán kết quả vào dict
+
+        return {
+            "permissions": mapped_perms,
+            "sub_folders": sub_folders
+        }
+
+    except Exception as e:
+        print(f"⚠️ Lỗi khi fetch Drive info: {e}")
+        return {"permissions": [], "sub_folders": [], "drive_error": str(e)}
+
+# ... (Các phần còn lại của file giữ nguyên) ...
+
+# ========================================================
+# MAIN FUNCTION: GET DETAIL
+# ========================================================
+
+def get_folder_full_detail(folder_id: int):
+    """
+    Lấy chi tiết folder từ DB + Kết hợp thông tin Live từ Drive
+    """
+    # 1. Lấy dữ liệu tĩnh từ Database
+    folder_data = folder_repo.get_by_id(folder_id)
+    if not folder_data:
+        return None
+
+    # 2. Lấy ID Drive
+    root_id = folder_data.get("root_folder_id")
+
+    # 3. Gọi Drive API để lấy thêm info (Quyền & Folder con)
+    if root_id:
+        print(f"🔍 Đang quét info live từ Drive ID: {root_id}...")
+        drive_info = _fetch_drive_info(root_id)
+        
+        # Merge dữ liệu Drive vào kết quả trả về
+        folder_data.update(drive_info)
+    else:
+        folder_data["permissions"] = []
+        folder_data["sub_folders"] = []
+
+    return folder_data
+
+
+# ========================================================
+# BROWSE FUNCTION (MỚI)
+# ========================================================
+def browse_drive_folder(drive_folder_id: str):
+    try:
+        service = get_drive_service()
+        
+        query = f"'{drive_folder_id}' in parents and trashed=false"
+        
+        results = service.files().list(
+            q=query,
+            # SỬA LẠI DÒNG NÀY (createdTime chỉ có 1 chữ i)
+            fields="files(id, name, mimeType, webViewLink, createdTime, iconLink, size, lastModifyingUser)",
+            pageSize=1000,
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            orderBy="folder, name"
+        ).execute()
+        
+        items = results.get("files", [])
+        
+        # Xử lý dữ liệu đẹp hơn cho Frontend
+        processed_items = []
+        for item in items:
+            is_folder = item["mimeType"] == "application/vnd.google-apps.folder"
+            
+            processed_items.append({
+                "id": item["id"],
+                "name": item["name"],
+                "type": "folder" if is_folder else "file",
+                "mime_type": item["mimeType"],
+                "link": item["webViewLink"],
+                "created_at": item.get("createdTime"),
+                "icon": item.get("iconLink"),
+                "size": item.get("size", "-"), # Folder không có size
+                "modified_by": item.get("lastModifyingUser", {}).get("displayName", "Unknown")
+            })
+            
+        return processed_items
+
+    except Exception as e:
+        print(f"⚠️ Lỗi browse folder {drive_folder_id}: {e}")
+        # Ném lỗi ra để API bắt được
+        raise ValueError(f"Không thể đọc nội dung folder: {str(e)}")

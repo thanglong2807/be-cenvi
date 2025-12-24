@@ -1,14 +1,16 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
+from typing import Optional
 
-# Import thêm FolderUpdate (Schema dùng cho việc sửa)
-from app.schemas.folder_schema import FolderCreate, FolderUpdate 
+# Import Schemas
+from app.schemas.folder_schema import FolderCreate, FolderUpdate
 from app.services.folder_service import (
     list_folders,
-    get_folder,
+    get_folder_full_detail,
     get_folders_by_employee,
     create_folder,
-    update_folder, # <--- Import hàm sửa
-    delete_folder  # <--- Import hàm xóa
+    update_folder,
+    delete_folder,
+    browse_drive_folder # <--- Đảm bảo đã import hàm này
 )
 
 router = APIRouter(
@@ -16,37 +18,57 @@ router = APIRouter(
     tags=["Folders"]
 )
 
+# ==================================================================
+# 1. API DUYỆT DRIVE (STRING ID) - Đặt lên trên đầu
+# ==================================================================
 
-@router.get("")
+@router.get("/browse/{drive_id}", summary="Xem nội dung folder con (Dùng Drive ID)")
+def browse_content(drive_id: str):
+    """
+    API này nhận vào **Google Drive ID** (chuỗi ký tự).
+    Dùng để khi bấm vào folder con (vd: Kế toán, Nhân sự) thì gọi API này để xem file bên trong.
+    """
+    try:
+        items = browse_drive_folder(drive_id)
+        return {
+            "drive_id": drive_id,
+            "total_items": len(items),
+            "items": items
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi hệ thống: {str(e)}")
+
+
+# ==================================================================
+# 2. API CRUD DATABASE (INTEGER ID)
+# ==================================================================
+
+@router.get("", summary="Lấy danh sách folder (DB)")
 def get_all():
-    return {
-        "items": list_folders()
-    }
+    return {"items": list_folders()}
 
 
-@router.get("/{folder_id}")
+@router.get("/{folder_id}", summary="Xem chi tiết folder gốc (Dùng DB ID)")
 def detail(folder_id: int):
-    data = get_folder(folder_id)
+    """
+    API này nhận vào **Database ID** (số nguyên 1, 2, 3...).
+    Trả về thông tin chi tiết, quyền hạn và danh sách folder con cấp 1.
+    """
+    data = get_folder_full_detail(folder_id)
     if not data:
-        raise HTTPException(status_code=404, detail="Folder not found")
+        raise HTTPException(status_code=404, detail=f"Không tìm thấy folder DB ID {folder_id}")
     return data
 
 
 @router.get("/by-employee/{employee_id}")
 def by_employee(employee_id: int):
-    return {
-        "items": get_folders_by_employee(employee_id)
-    }
+    return {"items": get_folders_by_employee(employee_id)}
 
 
 @router.post("")
 def create(payload: FolderCreate):
-    """
-    Tạo folder công ty:
-    - Lưu dữ liệu vào DB
-    - Tạo folder trên Google Drive
-    - Áp template
-    """
     try:
         return create_folder(payload.dict())
     except ValueError as e:
@@ -55,28 +77,16 @@ def create(payload: FolderCreate):
 
 @router.put("/{folder_id}")
 def update(folder_id: int, payload: FolderUpdate):
-    """
-    Cập nhật thông tin folder:
-    - Update DB
-    - Tự động đổi tên trên Google Drive nếu Mã/Tên/MST thay đổi
-    """
     try:
-        # exclude_unset=True giúp chỉ update những trường người dùng gửi lên
         return update_folder(folder_id, payload.dict(exclude_unset=True))
     except ValueError as e:
-        # Trả về 404 nếu không tìm thấy ID, hoặc 400 nếu lỗi logic
-        status = 404 if "Không tìm thấy" in str(e) else 400
-        raise HTTPException(status_code=status, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.delete("/{folder_id}")
 def delete(folder_id: int):
-    """
-    Xóa folder:
-    - Xóa khỏi DB
-    - Chuyển folder trên Google Drive vào thùng rác (Trash)
-    """
     try:
-        return delete_folder(folder_id)
+        delete_folder(folder_id)
+        return {"success": True, "message": "Đã xóa thành công"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
