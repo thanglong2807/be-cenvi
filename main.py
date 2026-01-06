@@ -33,7 +33,7 @@ app.include_router(folder_router, prefix="/api/v1")
 app.include_router(migration_router, prefix="/api/v1") 
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def read_root():
     return {"message": "Server is running..."}
 
