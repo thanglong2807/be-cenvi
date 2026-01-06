@@ -420,3 +420,428 @@ def browse_drive_folder(drive_folder_id: str):
         print(f"⚠️ Lỗi browse folder {drive_folder_id}: {e}")
         # Ném lỗi ra để API bắt được
         raise ValueError(f"Không thể đọc nội dung folder: {str(e)}")
+
+# app/services/folder_service.py
+
+# ... (các import cũ)
+from app.services.drive_service import (
+    get_drive_service, 
+    add_permission, 
+    remove_permission_by_email, 
+    create_drive_shortcut
+)
+
+def handover_folders(old_employee_id: int, new_employee_id: int):
+    # 1. Lấy thông tin 2 nhân viên
+    old_emp = employee_repo.get_by_id(old_employee_id)
+    new_emp = employee_repo.get_by_id(new_employee_id)
+
+    if not old_emp or not new_emp:
+        raise ValueError("Thông tin nhân viên không tồn tại")
+    
+    # === THAY ĐỔI Ở ĐÂY: KHÔNG BÁO LỖI NỮA ===
+    # Lấy ID folder cha của nhân viên mới (nếu có)
+    target_shortcut_parent = new_emp.get('root_folder_id')
+    
+    # 2. Lấy danh sách folder mà nhân viên cũ đang quản lý
+    folders = folder_repo.get_by_employee(old_employee_id)
+    
+    if not folders:
+        return {"message": "Nhân viên cũ không quản lý folder nào."}
+
+    service = get_drive_service()
+    processed_count = 0
+
+    # 3. Duyệt qua từng folder để xử lý
+    for folder in folders:
+        folder_drive_id = folder['root_folder_id']
+        folder_name = f"{folder['mst']} - {folder['company_name']}"
+
+        if not folder_drive_id:
+            continue
+
+        # A. Cấp quyền cho nhân viên MỚI (Vẫn chạy bình thường)
+        try:
+            add_permission(service, folder_drive_id, new_emp['email'], role="writer")
+        except Exception as e:
+            print(f"Lỗi cấp quyền cho {folder_name}: {e}")
+
+        # B. Tạo Shortcut (CHỈ CHẠY NẾU CÓ FOLDER CHA)
+        if target_shortcut_parent:
+            create_drive_shortcut(
+                service=service,
+                target_id=folder_drive_id,
+                parent_id=target_shortcut_parent,
+                name=f"Shortcut - {folder_name}"
+            )
+        # Nếu không có target_shortcut_parent thì dòng này tự động bị bỏ qua, không lỗi nữa.
+
+        # C. Xóa quyền nhân viên CŨ (Vẫn chạy bình thường)
+        if old_emp.get('email'):
+            remove_permission_by_email(service, folder_drive_id, old_emp['email'])
+
+        # D. Cập nhật DB (Quan trọng nhất)
+        folder_repo.update(folder['id'], {
+            "manager_employee_id": new_employee_id
+        })
+        
+        processed_count += 1
+
+    return {
+        "status": "success", 
+        "transferred": processed_count,
+        "message": f"Đã bàn giao {processed_count} thư mục (Bỏ qua tạo shortcut nếu thiếu folder đích)"
+    }
+# app/services/folder_service.py
+
+# ... (các import cũ)
+from app.db.repositories.employee_repo import EmployeeRepository
+
+# Cache nhân viên để tìm cho nhanh (đỡ query DB nhiều lần)
+def get_employee_by_name_approx(name_raw: str):
+    if not name_raw: return None
+    clean_name = name_raw.split("_")[0].strip().lower() # Xóa hậu tố
+    repo = EmployeeRepository()
+    all_emps = repo.get_all()
+    
+    for emp in all_emps:
+        if emp['name'].lower() == clean_name:
+            return emp
+    return None
+
+def check_migration_status(mst: str, company_name: str, new_manager_name: str):
+    """
+    Hàm này KHÔNG thay đổi dữ liệu, chỉ trả về thông tin so sánh
+    """
+    mst_clean = mst.replace('"', '').strip()
+    folders = folder_repo.get_all()
+    # Tìm folder theo MST
+    target_folder = next((f for f in folders if f.get('mst') == mst_clean), None)
+
+    if not target_folder:
+        return {
+            "status": "not_found",
+            "message": f"Không tìm thấy MST {mst_clean} trong hệ thống"
+        }
+
+    current_manager_id = target_folder.get('manager_employee_id')
+    current_status = target_folder.get('status')
+    
+    # Logic xác định hành động
+    action = "none" # Không làm gì
+    action_desc = "Dữ liệu khớp, không cần thay đổi"
+    new_data = {}
+
+    # Trường hợp 1: Dừng dịch vụ
+    if new_manager_name == "Đã dừng dịch vụ":
+        if current_status == 'active':
+            action = "deactivate"
+            action_desc = "⛔ Chuyển trạng thái sang: DỪNG DỊCH VỤ + Xóa quyền Drive"
+        else:
+            action_desc = "Đã dừng dịch vụ rồi. Bỏ qua."
+    
+    # Trường hợp 2: Có nhân viên quản lý
+    else:
+        new_emp = get_employee_by_name_approx(new_manager_name)
+        if not new_emp:
+            return {
+                "status": "warning",
+                "message": f"⚠️ Không tìm thấy nhân viên tên '{new_manager_name}' trong DB"
+            }
+        
+        new_data['new_employee_id'] = new_emp['id']
+        new_data['new_employee_name'] = new_emp['name']
+
+        if current_manager_id != new_emp['id']:
+            action = "handover"
+            action_desc = f"🔄 Bàn giao từ ID {current_manager_id} sang {new_emp['name']}"
+        elif current_status != 'active':
+            action = "activate"
+            action_desc = "✅ Kích hoạt lại dịch vụ (Active)"
+
+    return {
+        "status": "ok",
+        "folder_id": target_folder['id'],
+        "root_folder_id": target_folder['root_folder_id'],
+        "company_name": target_folder['company_name'],
+        "current_manager_id": current_manager_id,
+        "action": action,
+        "description": action_desc,
+        "new_data": new_data
+    }
+
+def execute_migration_step(folder_id: int, action: str, new_data: dict = None):
+    """
+    Hàm thực thi thay đổi thật sự
+    """
+    folder = folder_repo.get_by_id(folder_id)
+    service = get_drive_service()
+    
+    if action == "deactivate":
+        # 1. Update DB
+        folder_repo.update(folder_id, {"status": "inactive"})
+        # 2. Xóa quyền (nếu cần thiết và có logic lấy email cũ)
+        # (Bạn có thể thêm logic remove_permission ở đây như script trước)
+        return "Đã dừng dịch vụ thành công"
+
+    elif action == "handover":
+        old_id = folder['manager_employee_id']
+        new_id = new_data['new_employee_id']
+        if old_id:
+             handover_folders(old_id, new_id)
+        else:
+             # Trường hợp cũ chưa có ai, chỉ update người mới
+             folder_repo.update(folder_id, {"manager_employee_id": new_id})
+        
+        return "Đã bàn giao quyền thành công"
+    
+    elif action == "activate":
+        folder_repo.update(folder_id, {"status": "active"})
+        return "Đã kích hoạt lại thành công"
+
+    return "Không có hành động nào được thực hiện"
+
+
+# app/services/folder_service.py
+
+def check_migration_status(company_code: str, mst: str, company_name: str, new_manager_name: str):
+    """
+    Tìm folder dựa trên MST hoặc Mã công ty.
+    """
+    # 1. Chuẩn hóa dữ liệu đầu vào
+    mst_clean = mst.replace('"', '').replace("'", "").strip()
+    code_clean = company_code.strip()
+    
+    # 2. Lấy tất cả folder để tìm kiếm
+    # (Nếu DB lớn, nên viết query trong Repo: find_by_mst_or_code)
+    all_folders = folder_repo.get_all()
+    
+    target_folder = None
+
+    # --- LOGIC TÌM KIẾM ---
+    # Cách 1: Tìm theo MST trước (Chính xác nhất)
+    if mst_clean:
+        target_folder = next((f for f in all_folders if f.get('mst') and f.get('mst').strip() == mst_clean), None)
+    
+    # Cách 2: Nếu không thấy MST, tìm theo Mã công ty
+    if not target_folder and code_clean:
+         target_folder = next((f for f in all_folders if f.get('company_code') and f.get('company_code').strip() == code_clean), None)
+
+    # -----------------------
+
+    if not target_folder:
+        return {
+            "status": "not_found",
+            "message": f"❌ Không tìm thấy MST '{mst_clean}' hoặc Mã '{code_clean}' trong DB"
+        }
+
+    # Lấy thông tin hiện tại
+    current_manager_id = target_folder.get('manager_employee_id')
+    current_status = target_folder.get('status')
+    current_code = target_folder.get('company_code')
+    
+    # Logic xác định hành động
+    action = "none"
+    action_desc = "✅ Dữ liệu khớp/Không thay đổi"
+    new_data = {}
+
+    # Logic 1: Dừng dịch vụ
+    if new_manager_name == "Đã dừng dịch vụ":
+        if current_status == 'active':
+            action = "deactivate"
+            action_desc = "⛔ Chuyển trạng thái sang: DỪNG DỊCH VỤ + Xóa quyền Drive"
+        else:
+            action_desc = "ℹ️ Đã dừng dịch vụ rồi. Bỏ qua."
+    
+    # Logic 2: Có người quản lý (Chuyển quyền hoặc Active lại)
+    else:
+        new_emp = get_employee_by_name_approx(new_manager_name)
+        if not new_emp:
+            return {
+                "status": "warning",
+                "message": f"⚠️ Không tìm thấy nhân viên tên '{new_manager_name}' trong hệ thống"
+            }
+        
+        new_data['new_employee_id'] = new_emp['id']
+        new_data['new_employee_name'] = new_emp['name']
+
+        # Nếu người quản lý khác nhau -> Bàn giao
+        if current_manager_id != new_emp['id']:
+            action = "handover"
+            # Tìm tên người cũ để hiển thị cho rõ
+            old_emp_name = "Chưa có"
+            if current_manager_id:
+                old_emp = employee_repo.get_by_id(current_manager_id)
+                if old_emp: old_emp_name = old_emp['name']
+                
+            action_desc = f"🔄 Bàn giao: {old_emp_name} ➡ {new_emp['name']}"
+        
+        # Nếu đang Inactive mà lại có người quản lý -> Kích hoạt lại
+        elif current_status != 'active':
+            action = "activate"
+            action_desc = "✅ Kích hoạt lại dịch vụ (Active)"
+
+    return {
+        "status": "ok",
+        "folder_id": target_folder['id'],
+        "db_code": current_code,   # Trả về để so sánh trên UI
+        "db_mst": target_folder.get('mst'),
+        "db_name": target_folder.get('company_name'), # Tên trong DB để user so sánh
+        "action": action,
+        "description": action_desc,
+        "new_data": new_data
+    }
+    """
+    Logic tìm kiếm ưu tiên MST -> Company Code.
+    Bỏ qua Company Name khi tìm kiếm.
+    """
+    # 1. Chuẩn hóa dữ liệu đầu vào
+    mst_clean = str(mst).replace('"', '').replace("'", "").strip()
+    code_clean = str(company_code).strip()
+    
+    folders = folder_repo.get_all()
+    target_folder = None
+
+    # 2. Tìm kiếm (Ưu tiên MST trước)
+    # Lọc MST: Chỉ lấy số và dấu gạch ngang (bỏ khoảng trắng thừa)
+    
+    # Tìm theo MST chính xác
+    target_folder = next((f for f in folders if str(f.get('mst', '')).strip() == mst_clean), None)
+
+    # Nếu không thấy MST, tìm theo Company Code (nếu Code hợp lệ và khác NOCODE)
+    if not target_folder and code_clean and "NOCODE" not in code_clean.upper():
+        target_folder = next((f for f in folders if str(f.get('company_code', '')).strip() == code_clean), None)
+
+    # 3. Kết quả tìm kiếm
+    if not target_folder:
+        return {
+            "status": "not_found",
+            "message": f"❌ Không tìm thấy MST: {mst_clean} hoặc Code: {code_clean}"
+        }
+
+    # 4. Logic xử lý (Giữ nguyên như cũ)
+    current_manager_id = target_folder.get('manager_employee_id')
+    current_status = target_folder.get('status')
+    
+    action = "none"
+    action_desc = "Dữ liệu khớp, không cần thay đổi"
+    new_data = {}
+
+    # Case: Dừng dịch vụ
+    if new_manager_name == "Đã dừng dịch vụ":
+        if current_status == 'active':
+            action = "deactivate"
+            action_desc = "⛔ Chuyển trạng thái sang: DỪNG DỊCH VỤ + Xóa quyền Drive"
+        else:
+            action_desc = "Đã dừng dịch vụ rồi. Bỏ qua."
+    
+    # Case: Có nhân viên quản lý
+    else:
+        new_emp = get_employee_by_name_approx(new_manager_name)
+        if not new_emp:
+            return {
+                "status": "warning",
+                "message": f"⚠️ Không tìm thấy nhân viên tên '{new_manager_name}' trong DB"
+            }
+        
+        new_data['new_employee_id'] = new_emp['id']
+        new_data['new_employee_name'] = new_emp['name']
+
+        if current_manager_id != new_emp['id']:
+            action = "handover"
+            action_desc = f"🔄 Bàn giao: {target_folder.get('company_code')} - {target_folder.get('mst')} \nTừ ID {current_manager_id} sang {new_emp['name']}"
+        elif current_status != 'active':
+            action = "activate"
+            action_desc = "✅ Kích hoạt lại dịch vụ (Active)"
+
+    return {
+        "status": "ok",
+        "folder_id": target_folder['id'],
+        "root_folder_id": target_folder['root_folder_id'],
+        # Trả về tên trong DB để người dùng đối chiếu với tên trong Excel xem có lệch nhiều không
+        "company_name_db": target_folder['company_name'], 
+        "mst_db": target_folder['mst'],
+        "company_code_db": target_folder.get('company_code'),
+        "current_manager_id": current_manager_id,
+        "action": action,
+        "description": action_desc,
+        "new_data": new_data
+    }
+
+def transfer_single_folder(folder_id: int, new_manager_id: int):
+    # A. Lấy thông tin
+    folder = folder_repo.get_by_id(folder_id)
+    new_emp = employee_repo.get_by_id(new_manager_id)
+    
+    if not folder or not new_emp:
+        raise ValueError("Dữ liệu không tồn tại")
+
+    current_manager_id = folder.get('manager_employee_id')
+    folder_drive_id = folder.get('root_folder_id')
+
+    # B. Xử lý Google Drive (Chỉ làm nếu có folder trên Drive)
+    if folder_drive_id:
+        service = get_drive_service()
+        
+        # 1. Cấp quyền cho Manager Mới (ID=2)
+        try:
+            add_permission(service, folder_drive_id, new_emp['email'], role="writer")
+        except Exception as e:
+            print(f"Warning add_permission: {e}")
+
+        # 2. Xóa quyền Manager Cũ (Nếu có)
+        if current_manager_id:
+            old_emp = employee_repo.get_by_id(current_manager_id)
+            if old_emp and old_emp.get('email'):
+                try:
+                    remove_permission_by_email(service, folder_drive_id, old_emp['email'])
+                except Exception as e:
+                    print(f"Warning remove_permission: {e}")
+        
+        # 3. Tạo Shortcut (Bỏ qua nếu chưa có folder đích - theo yêu cầu của bạn)
+        target_parent = new_emp.get('root_folder_id')
+        if target_parent:
+            try:
+                create_drive_shortcut(
+                    service=service, 
+                    target_id=folder_drive_id, 
+                    parent_id=target_parent, 
+                    name=f"Shortcut - {folder['mst']} - {folder['company_name']}"
+                )
+            except Exception as e:
+                print(f"Warning shortcut: {e}")
+
+    # C. CẬP NHẬT DATABASE (QUAN TRỌNG NHẤT)
+    # Dòng này đảm bảo manager_employee_id được set về 2 (hoặc ID bất kỳ được truyền vào)
+    folder_repo.update(folder_id, {
+        "manager_employee_id": new_manager_id,
+        "status": "active" # Đảm bảo active lại nếu đang inactive
+    })
+
+    return f"Đã chuyển folder {folder['company_name']} sang {new_emp['name']} (ID: {new_manager_id})"
+
+
+# 3. Cập nhật hàm Execute để gọi hàm mới
+def execute_migration_step(folder_id: int, action: str, new_data: dict = None):
+    """
+    Hàm thực thi thay đổi
+    """
+    folder = folder_repo.get_by_id(folder_id)
+    
+    if action == "deactivate":
+        folder_repo.update(folder_id, {"status": "inactive"})
+        # Logic xóa quyền Drive nếu cần...
+        return "Đã dừng dịch vụ thành công"
+
+    elif action == "handover":
+        new_id = new_data['new_employee_id'] # Đây chính là ID=2 từ frontend gửi xuống
+        
+        # GỌI HÀM MỚI VIẾT Ở TRÊN
+        msg = transfer_single_folder(folder_id, new_id)
+        return msg
+    
+    elif action == "activate":
+        folder_repo.update(folder_id, {"status": "active"})
+        return "Đã kích hoạt lại thành công"
+
+    return "Không có hành động nào được thực hiện"
