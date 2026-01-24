@@ -1,22 +1,18 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from app.core.config import settings
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+# Tạo file database.db ngay tại thư mục gốc
+SQLALCHEMY_DATABASE_URL = "sqlite:///./cenvi_audit.db"
 
 engine = create_engine(
-    settings.DATABASE_URL,
-    pool_pre_ping=True,
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
-
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine,
-)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
-
-# ✅ ADD THIS
+# Hàm helper để lấy session
 def get_db():
     db = SessionLocal()
     try:

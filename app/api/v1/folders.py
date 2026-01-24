@@ -1,3 +1,4 @@
+import traceback 
 from fastapi import APIRouter, HTTPException, Body
 from typing import Optional
 
@@ -10,7 +11,8 @@ from app.services.folder_service import (
     create_folder,
     update_folder,
     delete_folder,
-    browse_drive_folder # <--- Đảm bảo đã import hàm này
+    browse_drive_folder, # <--- Đảm bảo đã import hàm này
+    scan_folders_not_in_db
 )
 
 router = APIRouter(
@@ -49,7 +51,20 @@ def browse_content(drive_id: str):
 def get_all():
     return {"items": list_folders()}
 
-
+@router.get("/scan-missing")
+def scan_missing_drive_folders():
+    try:
+        print("--- Đang bắt đầu quét Drive ---")
+        return scan_folders_not_in_db()
+    except Exception as e:
+        # In chi tiết lỗi ra màn hình đen để debug
+        print("========= LỖI SCAN ==========")
+        traceback.print_exc() 
+        print(f"Lỗi cụ thể: {e}")
+        print("=============================")
+        
+        # Trả về lỗi rõ ràng cho Postman/Frontend
+        raise HTTPException(status_code=500, detail=f"Lỗi hệ thống: {str(e)}")
 @router.get("/{folder_id}", summary="Xem chi tiết folder gốc (Dùng DB ID)")
 def detail(folder_id: int):
     """

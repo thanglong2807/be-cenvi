@@ -1,13 +1,16 @@
 import os
 
-from app.services.drive_service import get_drive_service
+from app.services.drive_service import get_drive_service, browse_drive_folder, get_drive_permissions
 from app.services.drive_folder_builder import apply_template
 from app.db.repositories.folder_repo import FolderRepository
 from app.db.repositories.employee_repo import EmployeeRepository
 from app.core.folder_templates import FOLDER_TEMPLATES
 from googleapiclient.errors import HttpError
+from datetime import datetime
+
 # ========= LOAD ENV =========
 ROOT_DRIVE_FOLDER_ID = os.getenv("COMPANY_PARENT_FOLDER_ID")
+ROOT_DRIVE_HKD_ID = os.getenv("ROOT_DRIVE_HKD_ID") 
 if not ROOT_DRIVE_FOLDER_ID:
     raise RuntimeError("ROOT_DRIVE_FOLDER_ID chưa được khai báo trong .env")
 
@@ -30,59 +33,147 @@ def get_folders_by_employee(employee_id: int):
 
 
 # ========= CREATE (GẮN DRIVE) =========
+
+# app/services/folder_service.py
+
+# ... (các import và biến ROOT_DRIVE_FOLDER_ID cũ) ...
+
+# Load thêm biến HKD
+ROOT_DRIVE_HKD_ID = os.getenv("ROOT_DRIVE_HKD_ID")
+
+import os
+from datetime import datetime
+from app.services.drive_service import get_drive_service, add_permission
+from app.services.drive_folder_builder import apply_template
+from app.db.repositories.folder_repo import FolderRepository
+from app.db.repositories.employee_repo import EmployeeRepository
+from app.core.folder_templates import FOLDER_TEMPLATES
+
+# ========= REPOSITORIES & ENV =========
+folder_repo = FolderRepository()
+employee_repo = EmployeeRepository()
+
+ROOT_DRIVE_FOLDER_ID = os.getenv("ROOT_DRIVE_FOLDER_ID")
+ROOT_DRIVE_HKD_ID = os.getenv("ROOT_DRIVE_HKD_ID")
+
 def create_folder(data: dict):
-    # 1. Check nhân viên
-    if not employee_repo.get_by_id(data["manager_employee_id"]):
-        raise ValueError("Nhân viên quản lý không tồn tại")
+    # 1. Lấy thông tin nhân viên để lấy Email
+    manager = employee_repo.get_by_id(data["manager_employee_id"])
+    if not manager or not manager.get("email"):
+        raise ValueError("Nhân viên quản lý không tồn tại hoặc thiếu Email")
+    
+    manager_email = manager["email"]
 
-    # 2. Check template
-    if data["template"] not in FOLDER_TEMPLATES:
-        raise ValueError("Template không hợp lệ")
+    # 2. Lấy trạng thái mong muốn (Mới)
+    # Nếu frontend không gửi status, mặc định là "active"
+    target_status = data.get("status", "active")
 
-    # 3. Tạo record trước
+    # 3. Check template
+    template_name = data.get("template", "STANDARD")
+    if template_name not in FOLDER_TEMPLATES:
+        raise ValueError(f"Template '{template_name}' không hợp lệ")
+
+    # 4. Check trùng lặp (Logic cũ: Xóa record lỗi, chặn record active)
+    mst = data.get("mst")
+    company_code = data.get("company_code")
+    all_folders = folder_repo.get_all()
+    existing = next((f for f in all_folders if f.get('mst') == mst or f.get('company_code') == company_code), None)
+    
+    if existing:
+        if existing.get("status") == "active":
+            raise ValueError(f"Dữ liệu đã tồn tại và đang hoạt động (ID: {existing['id']})")
+        else:
+            try:
+                # Xóa record lỗi cũ để tạo cái mới
+                folder_repo.delete(existing['id'])
+            except:
+                pass
+
+    # 5. Lưu record vào DB trước (với trạng thái target_status)
     folder = folder_repo.create(data)
 
     try:
         service = get_drive_service()
 
-        # 4. Tạo folder Drive
-        root_name = f"{folder['company_code']}-{folder['company_name']}-{folder['mst']}"
+        # 6. Xác định Folder cha gốc trên Drive (Cty vs HKD)
+        target_parent_id = ROOT_DRIVE_FOLDER_ID
+        if template_name == "HKD":
+            if not ROOT_DRIVE_HKD_ID:
+                raise RuntimeError("ROOT_DRIVE_HKD_ID chưa được khai báo trong .env")
+            target_parent_id = ROOT_DRIVE_HKD_ID
 
-        root = service.files().create(
-        body={
-            "name": root_name,
-            "mimeType": "application/vnd.google-apps.folder",
-            "parents": [ROOT_DRIVE_FOLDER_ID]
-        },
-        fields="id",
-        supportsAllDrives=True
-    ).execute()
+        if not target_parent_id:
+            raise RuntimeError("Chưa cấu hình ID thư mục gốc trên Drive")
 
+        # 7. Tạo folder con mới trên Drive
+        c_code = folder.get('company_code', 'NOCODE')
+        c_name = folder.get('company_name', 'NONAME')
+        c_mst = folder.get('mst', 'NOMST')
+        root_name = f"{c_code}_{c_name}_{c_mst}"
 
-        root_folder_id = root["id"]
+        root_drive_obj = service.files().create(
+            body={
+                "name": root_name,
+                "mimeType": "application/vnd.google-apps.folder",
+                "parents": [target_parent_id]
+            },
+            fields="id",
+            supportsAllDrives=True
+        ).execute()
 
-        # 5. Áp template
-        apply_template(
-            service=service,
-            parent_folder_id=root_folder_id,
-            template_name=folder["template"],
-            company_short_name=folder["company_name"],
-            year=folder["year"]
-        )
+        new_sub_folder_id = root_drive_obj["id"]
 
-        # 6. Update record
+        # 8. CẤP QUYỀN 'fileOrganizer' (Quản lý nội dung) cho nhân viên phụ trách
+        # Quyền này chỉ áp dụng cho folder mới tạo này, ghi đè quyền xem ở folder tổng
+        add_permission(service, new_sub_folder_id, manager_email, role="fileOrganizer")
+
+        # 9. Logic tạo folder theo Năm (2024 -> Hiện tại)
+        input_year = int(folder.get("year", datetime.now().year))
+        current_year = datetime.now().year
+        
+        if input_year == 2024:
+            # Tạo danh sách năm từ 2024 đến năm hiện tại
+            years_to_process = list(range(2024, max(current_year, 2024) + 1))
+        else:
+            # Chỉ tạo đúng năm đã nhập
+            years_to_process = [input_year]
+
+        # 10. Áp template tạo cấu trúc sub-folders bên trong
+        for y in years_to_process:
+            apply_template(
+                service=service,
+                parent_folder_id=new_sub_folder_id,
+                template_name=template_name,
+                company_short_name=c_name,
+                year=y
+            )
+
+        # 11. Cập nhật record DB lần cuối (Gắn ID Drive và set Status chính xác)
         folder_repo.update(folder["id"], {
-            "root_folder_id": root_folder_id
+            "root_folder_id": new_sub_folder_id,
+            "status": target_status
         })
 
-        folder["root_folder_id"] = root_folder_id
-        return folder
+        # Trả về kết quả cho Frontend
+        return {
+            **folder, 
+            "root_folder_id": new_sub_folder_id, 
+            "status": target_status
+        }
 
     except Exception as e:
-        folder_repo.update(folder["id"], {
-            "status": "error"
-        })
-        raise ValueError(f"Lỗi tạo Drive: {str(e)}")
+        if f_id:
+            folder_repo.update(f_id, {"status": "error"})
+            
+        # === THÊM DÒNG NÀY ĐỂ SOI LỖI TRÊN TERMINAL ===
+        print("!!!!!!!! LỖI TẠI CREATE_FOLDER !!!!!!!!")
+        import traceback
+        traceback.print_exc() 
+        print(f"Chi tiết: {str(e)}")
+        # ==============================================
+            
+        raise ValueError(f"Lỗi hệ thống: {str(e)}") 
+
 
 # ========= UPDATE (SỬA) =========
 def update_folder(folder_id: int, data: dict):
@@ -115,7 +206,7 @@ def update_folder(folder_id: int, data: dict):
     new_mst = data.get("mst", current_folder["mst"])
 
     new_full_name = f"{new_code}-{new_name}-{new_mst}"
-    old_full_name = f"{current_folder['company_code']}-{current_folder['company_name']}-{current_folder['mst']}"
+    old_full_name = f"{current_folder['company_code']}_{current_folder['company_name']}_{current_folder['mst']}"
 
     if root_folder_id and new_full_name != old_full_name:
         try:
@@ -350,85 +441,142 @@ def _fetch_drive_info(root_folder_id: str):
 # MAIN FUNCTION: GET DETAIL
 # ========================================================
 
-def get_folder_full_detail(folder_id: int):
-    """
-    Lấy chi tiết folder từ DB + Kết hợp thông tin Live từ Drive
-    """
-    # 1. Lấy dữ liệu tĩnh từ Database
-    folder_data = folder_repo.get_by_id(folder_id)
-    if not folder_data:
+
+
+
+# app/services/folder_service.py
+
+def get_folder_full_detail(folder_db_id: int):
+    # 1. Lấy dữ liệu từ Database
+    folder = folder_repo.get_by_id(folder_db_id)
+    if not folder:
         return None
 
-    # 2. Lấy ID Drive
-    root_id = folder_data.get("root_folder_id")
+    # Khởi tạo object kết quả (Đảm bảo luôn có key 'children' và 'permissions')
+    result = folder.copy() if isinstance(folder, dict) else folder.__dict__.copy()
+    result['children'] = []
+    result['permissions'] = []
 
-    # 3. Gọi Drive API để lấy thêm info (Quyền & Folder con)
-    if root_id:
-        print(f"🔍 Đang quét info live từ Drive ID: {root_id}...")
-        drive_info = _fetch_drive_info(root_id)
-        
-        # Merge dữ liệu Drive vào kết quả trả về
-        folder_data.update(drive_info)
-    else:
-        folder_data["permissions"] = []
-        folder_data["sub_folders"] = []
+    root_id = result.get('root_folder_id')
+    if not root_id:
+        return result
 
-    return folder_data
+    try:
+        service = get_drive_service()
 
+        # 2. Lấy danh sách Folder con (Sử dụng hàm browse_drive_folder để có format chuẩn)
+        # Hàm này sẽ trả về children có link, mime_type, created_at... như bạn đã thấy
+        result['children'] = browse_drive_folder(root_id)
+
+        # 3. Lấy danh sách Quyền truy cập (Permissions)
+        try:
+            perm_results = service.permissions().list(
+                fileId=root_id,
+                fields="permissions(id, displayName, emailAddress, role)",
+                supportsAllDrives=True
+            ).execute()
+            
+            raw_perms = perm_results.get('permissions', [])
+            processed_perms = []
+            
+            # Bảng map role sang tên hiển thị
+            role_map = {
+                "organizer": "Manager",
+                "fileOrganizer": "Content Manager",
+                "writer": "Contributor",
+                "reader": "Viewer"
+            }
+
+            for p in raw_perms:
+                email = p.get('emailAddress')
+                if email:
+                    # Bỏ qua con bot quét để danh sách sạch
+                    if "gserviceaccount.com" in email:
+                        continue
+                        
+                    role = p.get('role', 'reader')
+                    processed_perms.append({
+                        "name": p.get('displayName') or email.split('@')[0],
+                        "email": email,
+                        "role": role,
+                        "role_display": role_map.get(role, role.capitalize())
+                    })
+            
+            # GÁN VÀO KẾT QUẢ TRẢ VỀ
+            result['permissions'] = processed_perms
+
+        except Exception as pe:
+            print(f"⚠️ Không lấy được permissions: {pe}. Có thể Bot chưa có quyền Manager.")
+
+    except Exception as e:
+        print(f"🔥 Lỗi hệ thống khi gọi Drive: {e}")
+
+    return result
 
 # ========================================================
 # BROWSE FUNCTION (MỚI)
 # ========================================================
-def browse_drive_folder(drive_folder_id: str):
-    try:
-        service = get_drive_service()
-        
-        query = f"'{drive_folder_id}' in parents and trashed=false"
-        
-        results = service.files().list(
-            q=query,
-            # SỬA LẠI DÒNG NÀY (createdTime chỉ có 1 chữ i)
-            fields="files(id, name, mimeType, webViewLink, createdTime, iconLink, size, lastModifyingUser)",
-            pageSize=1000,
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-            orderBy="folder, name"
-        ).execute()
-        
-        items = results.get("files", [])
-        
-        # Xử lý dữ liệu đẹp hơn cho Frontend
-        processed_items = []
-        for item in items:
-            is_folder = item["mimeType"] == "application/vnd.google-apps.folder"
-            
-            processed_items.append({
-                "id": item["id"],
-                "name": item["name"],
-                "type": "folder" if is_folder else "file",
-                "mime_type": item["mimeType"],
-                "link": item["webViewLink"],
-                "created_at": item.get("createdTime"),
-                "icon": item.get("iconLink"),
-                "size": item.get("size", "-"), # Folder không có size
-                "modified_by": item.get("lastModifyingUser", {}).get("displayName", "Unknown")
-            })
-            
-        return processed_items
-
-    except Exception as e:
-        print(f"⚠️ Lỗi browse folder {drive_folder_id}: {e}")
-        # Ném lỗi ra để API bắt được
-        raise ValueError(f"Không thể đọc nội dung folder: {str(e)}")
-
 # app/services/folder_service.py
 
+def browse_drive_folder(drive_folder_id: str):
+    service = get_drive_service()
+    try:
+        results = service.files().list(
+            q=f"'{drive_folder_id}' in parents and trashed = false",
+            # Bắt buộc phải có webViewLink trong fields
+            fields="files(id, name, mimeType, webViewLink, iconLink, createdTime, lastModifyingUser)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute()
+        
+        raw_items = results.get('files', [])
+        
+        # CHUẨN HÓA DỮ LIỆU TRƯỚC KHI TRẢ VỀ FRONTEND
+        processed_items = []
+        for item in raw_items:
+            processed_items.append({
+                "id": item.get("id"),
+                "name": item.get("name"),
+                "mime_type": item.get("mimeType"),
+                "link": item.get("webViewLink"), # Chuyển webViewLink thành link ở đây
+                "created_at": item.get("createdTime"),
+                "modified_by": item.get("lastModifyingUser", {}).get("displayName", "N/A")
+            })
+        return processed_items
+    except Exception as e:
+        raise ValueError(f"Lỗi: {str(e)}")
+
+# 2. Hàm lấy chi tiết Folder (Kết hợp DB và Drive)
+def get_folder_full_detail(folder_db_id: int):
+    folder = folder_repo.get_by_id(folder_db_id)
+    if not folder:
+        return None
+
+    root_id = folder.get('root_folder_id')
+    if not root_id:
+        return {**folder, "children": [], "permissions": []}
+
+    service = get_drive_service()
+
+    # 1. Gọi hàm lấy danh sách con (Gán vào key 'children' cho khớp FE)
+    children = browse_drive_folder(root_id)
+
+    # 2. Gọi hàm lấy danh sách thành viên
+    permissions = get_drive_permissions(service, root_id)
+
+    # 3. Gộp dữ liệu trả về
+    result = folder.copy() if isinstance(folder, dict) else folder.__dict__.copy()
+    result['children'] = children
+    result['permissions'] = permissions
+    
+    return result
 # ... (các import cũ)
 from app.services.drive_service import (
     get_drive_service, 
     add_permission, 
     remove_permission_by_email, 
-    create_drive_shortcut
+    create_drive_shortcut,
+    list_drive_subfolders
 )
 
 def handover_folders(old_employee_id: int, new_employee_id: int):
@@ -845,3 +993,192 @@ def execute_migration_step(folder_id: int, action: str, new_data: dict = None):
         return "Đã kích hoạt lại thành công"
 
     return "Không có hành động nào được thực hiện"
+
+
+# app/services/folder_service.py
+
+# app/services/folder_service.py
+
+import os
+
+# app/services/folder_service.py
+
+def scan_folders_not_in_db():
+    all_db = folder_repo.get_all()
+    all_db_folders = folder_repo.get_all() 
+    # Gom dữ liệu để tra cứu
+    db_root_ids = set()
+    db_mst_map = {}
+    db_code_map = {}
+
+    def clean_str(val):
+        if not val: return ""
+        return str(val).strip().replace("'", "").replace('"', '').lstrip('0').lower()
+
+    for f in all_db:
+        rid = getattr(f, 'root_folder_id', None) or f.get('root_folder_id')
+        mst = getattr(f, 'mst', None) or f.get('mst')
+        code = getattr(f, 'company_code', None) or f.get('company_code')
+        
+        rid_s = str(rid).strip() if rid else ""
+        if rid_s: db_root_ids.add(rid_s)
+        
+        # Map dùng để truy tìm bản ghi cũ qua MST/Code
+        if mst: db_mst_map[clean_str(mst)] = f
+        if code: db_code_map[clean_str(code)] = f
+
+    # Lấy dữ liệu Drive
+    service = get_drive_service()
+    drive_folders = list_drive_subfolders(service, ROOT_DRIVE_FOLDER_ID)
+    hkd_id = os.getenv("ROOT_DRIVE_HKD_ID")
+    if hkd_id: drive_folders.extend(list_drive_subfolders(service, hkd_id))
+
+    results = []
+    for item in drive_folders:
+        did = str(item['id']).strip()
+        if did in db_root_ids: continue # Đã khớp ID -> Bỏ qua
+
+        name = item['name']
+        parts = name.split('_')
+        s_code = clean_str(parts[0].strip() if len(parts) > 0 else "")
+        s_mst = clean_str(parts[2].strip() if len(parts) > 2 else "")
+
+        match_db_id = None
+        match_info = ""
+        action_type = "create" # Mặc định là tạo mới
+
+        # KIỂM TRA TRÙNG MST HOẶC MÃ ĐỂ CẬP NHẬT
+        matched_record = db_mst_map.get(s_mst) or db_code_map.get(s_code)
+        
+        if matched_record:
+            action_type = "update" # Tìm thấy record cũ -> Chuyển sang chế độ Update
+            match_db_id = getattr(matched_record, 'id', None) or matched_record.get('id')
+            match_info = getattr(matched_record, 'company_name', None) or matched_record.get('company_name')
+
+        results.append({
+            "drive_id": did,
+            "drive_name": name,
+            "drive_link": item.get('webViewLink'),
+            "suggested_code": parts[0].strip() if len(parts) > 0 else "",
+            "suggested_mst": parts[2].strip() if len(parts) > 2 else "",
+            "action_type": action_type,
+            "match_db_id": match_db_id,
+            "match_info": match_info
+        })
+
+    return {
+        "total_drive": len(drive_folders), # Tổng số folder robot thấy trên Drive
+        "total_db": len(all_db_folders),    # Tổng số hồ sơ đang có trong Database
+        "missing_count": len(results),      # Số lượng chưa đồng bộ (hiển thị trong bảng)
+        "items": results
+    }
+
+# --- THÊM HÀM MỚI ĐỂ GHÉP NỐI ---
+def link_drive_to_existing_db(folder_db_id: int, drive_id: str):
+    """
+    Cập nhật root_folder_id cho một record đã có
+    """
+    # Check xem drive_id này có ai dùng chưa
+    all_db = folder_repo.get_all()
+    if any(f.get('root_folder_id') == drive_id for f in all_db):
+        raise ValueError("Folder Drive này đã được gắn cho công ty khác rồi!")
+
+    folder_repo.update(folder_db_id, {
+        "root_folder_id": drive_id,
+        "status": "active"
+    })
+    return True
+
+
+def import_folder_from_drive(data: dict):
+    """
+    Lưu folder đã có sẵn trên Drive vào Database.
+    """
+    # 1. Validate dữ liệu cơ bản
+    if not data.get("company_name") or not data.get("root_folder_id"):
+        raise ValueError("Thiếu tên công ty hoặc ID Drive")
+
+    # 2. Kiểm tra trùng lặp (SỬA ĐOẠN NÀY)
+    # Thay vì gọi get_by_root_id, ta lấy tất cả và lọc
+    all_folders = folder_repo.get_all()
+    
+    # Tìm xem có folder nào trùng root_folder_id không
+    existing = next((f for f in all_folders if f.get('root_folder_id') == data["root_folder_id"]), None)
+
+    if existing:
+        raise ValueError(f"Folder này đã tồn tại trong hệ thống (Mã: {existing.get('company_code', 'N/A')})")
+
+    # 3. Tạo record trong DB
+    new_folder = folder_repo.create({
+        "company_name": data["company_name"],
+        "company_code": data.get("company_code"),
+        "mst": data.get("mst"),
+        "manager_employee_id": data.get("manager_employee_id"),
+        "root_folder_id": data["root_folder_id"],
+        "year": data.get("year", 2025),
+        
+        # === SỬA ĐOẠN NÀY ===
+        # Lấy từ dữ liệu gửi lên, nếu không có thì mới dùng mặc định
+        "status": data.get("status", "active"), 
+        "template": data.get("template", "STANDARD") 
+        # ====================
+    })
+    
+    return new_folder
+def delete_folder_on_drive(drive_id: str):
+    """
+    Xóa vĩnh viễn folder trên Google Drive
+    """
+    service = get_drive_service()
+    try:
+        service.files().delete(fileId=drive_id, supportsAllDrives=True).execute()
+        return True
+    except Exception as e:
+        raise ValueError(f"Lỗi xóa Drive: {str(e)}")
+
+
+# app/services/folder_service.py
+
+# app/services/folder_service.py
+
+def get_admin_folder_link(company_code: str):
+    # 1. Tìm công ty trong Database
+    all_folders = folder_repo.get_all()
+    
+    # Tìm folder dựa theo mã công ty (check cả Object và Dict)
+    folder = next((f for f in all_folders if (getattr(f, 'company_code', None) == company_code or f.get('company_code') == company_code)), None)
+    
+    if not folder:
+        return {"status": "error", "message": f"Không tìm thấy mã {company_code} trong DB"}
+    
+    root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
+    if not root_id:
+        return {"status": "error", "message": "Công ty này chưa được liên kết Drive"}
+
+    # 2. Truy cập Drive để tìm folder con chứa chữ "HANH-CHINH"
+    try:
+        from app.services.drive_service import get_drive_service # Import tại chỗ để tránh vòng lặp import
+        service = get_drive_service()
+        
+        # Tìm folder con có tên chứa chữ "HANH-CHINH"
+        query = f"'{root_id}' in parents and name contains 'HANH-CHINH' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+        results = service.files().list(
+            q=query,
+            fields="files(id, name, webViewLink)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute()
+        
+        files = results.get('files', [])
+        if not files:
+            return {"status": "error", "message": "Không tìm thấy folder con nào tên HANH-CHINH"}
+        
+        # Trả về folder đầu tiên tìm thấy
+        return {
+            "status": "success",
+            "company_name": getattr(folder, 'company_name', None) or folder.get('company_name'),
+            "folder_name": files[0]['name'],
+            "link": files[0]['webViewLink']
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"Lỗi Drive: {str(e)}"}

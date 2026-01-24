@@ -20,12 +20,19 @@ class FolderRepository:
 
     def create(self, payload: dict):
         now = datetime.utcnow().isoformat()
+        
+        # Chỉ update những trường bắt buộc phải có giá trị hệ thống
         payload.update({
             "created_at": now,
             "updated_at": now,
-            "status": "active",
-            "root_folder_id": None
         })
+        
+        # Nếu chưa có status thì mặc định active
+        if "status" not in payload or payload["status"] is None:
+            payload["status"] = "active"
+        # TUYỆT ĐỐI KHÔNG ĐƯỢC CÓ DÒNG: "root_folder_id": None
+        # Vì hàm import_folder_from_drive đã truyền ID vào payload rồi.
+        
         return self.db.insert(payload)
 
     def update(self, folder_id: int, data: dict):

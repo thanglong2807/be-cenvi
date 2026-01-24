@@ -5,10 +5,12 @@ from datetime import datetime
 class FolderCreate(BaseModel):
     company_code: str
     company_name: str
-    mst: str               # 👈 THÊM
-    manager_employee_id: int
+    mst: str
     year: int
-    template: str = "STANDARD"
+    template: str
+    manager_employee_id: int
+    # === THÊM TRƯỜNG NÀY ===
+    status: Optional[str] = "active"
 
 
 class FolderResponse(BaseModel):
@@ -31,8 +33,7 @@ class FolderBase(BaseModel):
     template: str
     manager_employee_id: int
 
-class FolderCreate(FolderBase):
-    pass
+
 
 class FolderUpdate(BaseModel):
     # Tất cả để Optional để cho phép sửa từng phần
@@ -42,3 +43,4 @@ class FolderUpdate(BaseModel):
     year: Optional[int] = None
     template: Optional[str] = None
     manager_employee_id: Optional[int] = None
+    
