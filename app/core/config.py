@@ -26,12 +26,34 @@ class Settings(BaseSettings):
     # Folder cha (Không bắt buộc, để chuỗi rỗng nếu không dùng)
     COMPANY_PARENT_FOLDER_ID: str = ""
 
-    # --- 4. CẤU HÌNH TOKEN MỚI ---
+    # --- 4. CẤU HÌNH GOOGLE SHEETS (DASHBOARD) ---
+    # ID của Google Sheet chứa dữ liệu báo cáo doanh thu
+    GOOGLE_SHEET_ID: str = Field(default="1KF68El6c5-_2QwybKa2k-3N149L-xYU2-h6SsSAUXno", env="GOOGLE_SHEET_ID")
+    
+    # Sheet range: Format 'SheetName'!A1:Z100
+    # Với sheet name có khoảng trắng/ký tự đặc biệt, dùng ngoặc kép
+    GOOGLE_SHEET_RANGE: str = "A1:DA200"
+    GOOGLE_SHEET_NAME: str = "KẾ TOÁN THUẾ_KPI"  # Sheet thứ 12 (gid=514374063)
+
+    # Mapping ranges (column letters only, without sheet name)
+    DASH_CUSTOMERS_RANGE: str = "F:Q"
+    DASH_REVENUE_RANGE: str = "S:AD"
+    DASH_DEBT_2024_RANGE: str = "AF:AQ"
+    DASH_DEBT_2025_RANGE: str = "AR:BC"
+    DASH_DEBT_2026_RANGE: str = "BD:BX"  # adjust if needed
+
+    # Data starting row (1-based)
+    DASH_DATA_START_ROW: int = 7
+
+    # Polling interval (giây)
+    SHEET_POLLING_INTERVAL: int = 30
+
+    # --- 5. CẤU HÌNH TOKEN MỚI ---
     # Nơi lưu file token.pickle (tự động tạo)
     TOKEN_PATH: str = os.path.join("credentials", "token.pickle")
     # File này sẽ chứa dữ liệu sau khi bấm "Xác nhận"
     STORAGE_PATH: str = os.path.join("app", "data", "companies_storage.json")
-    # --- 5. CẦU NỐI (ALIAS) CHO CODE MỚI ---
+    # --- 6. CẦU NỐI (ALIAS) CHO CODE MỚI ---
     @property
     def CREDENTIALS_PATH(self) -> str:
         # Trả về giá trị của biến cũ

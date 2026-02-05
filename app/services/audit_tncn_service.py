@@ -2,38 +2,33 @@
 import re
 import traceback
 from app.services.drive_service import (
+    get_drive_service, 
     find_child_folder_by_name_contain, 
     find_child_folder_exact
 )
 from app.services.smart_renamer_service import analyze_file_content
 
 def detect_quarter_and_type(name):
-    """
-    Nhận diện Quý và Loại hồ sơ.
-    Chuyển đổi thông minh: T01-T03 -> Q1, T04-T06 -> Q2...
-    """
     name = name.upper()
     quarter = "UNKNOWN"
     file_type = "other"
     
-    # 1. NHẬN DIỆN KỲ (Check Cả Năm trước)
+    # 1. NHẬN DIỆN KỲ
     if any(k in name for k in ["CA-NAM", "CANAM", "YEAR", "FULL", "QT-NAM"]):
         quarter = "YEAR"
     else:
-        # Tìm Q1-Q4
         q_match = re.search(r'Q([1-4])\b|QUY\s?([1-4])|QUÝ\s?([1-4])', name)
         if q_match:
             val = next(g for g in q_match.groups() if g is not None)
             quarter = f"Q{val}"
         else:
-            # Tìm Tháng rồi quy đổi sang Quý
             m_match = re.search(r'(?:T|THANG|THÁNG)\s?0?([1-9]|1[0-2])\b', name)
             if m_match:
                 m = int(m_match.group(1))
                 if 1 <= m <= 3: quarter = "Q1"
                 elif 4 <= m <= 6: quarter = "Q2"
                 elif 7 <= m <= 9: quarter = "Q3"
-                elif 10 <= m <= 12: quarter = "Q4"
+                else: quarter = "Q4"
 
     # 2. NHẬN DIỆN LOẠI HỒ SƠ
     if any(k in name for k in ["BL", "LUONG", "LƯƠNG"]): file_type = "payroll"
@@ -45,25 +40,12 @@ def detect_quarter_and_type(name):
 
 def get_tncn_audit_data(service, company_root_id, year, company_code):
     try:
-        print(f"--- 🔍 BẮT ĐẦU QUÉT TNCN: {company_code} | NĂM {year} ---")
-
-        # 1. Tìm folder Năm trong nhánh THUẾ
-        f_thue = find_child_folder_by_name_contain(service, company_root_id, "THUE")
-        if not f_thue: return {"status": "error", "message": "Thiếu folder TAI-LIEU-THUE"}
-        
-        f_year = find_child_folder_exact(service, f_thue['id'], str(year))
-        if not f_year: return {"status": "error", "message": f"Thiếu folder năm {year}"}
-
-        # 2. Xác định 2 nhánh mẹ: TNCN và GTGT (để lấy bảng lương thuế)
-        f_tncn_root = find_child_folder_by_name_contain(service, f_year['id'], "NHAN-CA-NHAN")
-        f_gtgt_root = find_child_folder_by_name_contain(service, f_year['id'], "GIA-TRI-GIA-TANG")
-
         all_raw_files = []
 
-        # Hàm trợ lý quét đệ quy và gắn nhãn nguồn gốc
+        # Hàm trợ lý quét và gắn nhãn nguồn gốc
         def scan_and_tag(root_folder_id, label):
             if not root_folder_id: return
-            # Tìm tất cả folder con (Quý 1, 2, 3, 4...)
+            # Lấy folder mẹ và các folder Quý/Tháng con bên trong
             subs = service.files().list(
                 q=f"'{root_folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
                 supportsAllDrives=True, includeItemsFromAllDrives=True
@@ -78,45 +60,57 @@ def get_tncn_audit_data(service, company_root_id, year, company_code):
                         supportsAllDrives=True, includeItemsFromAllDrives=True
                     ).execute()
                     for item in res.get('files', []):
-                        item['origin'] = label # Gắn nhãn TNCN hoặc GTGT
+                        item['origin'] = label
                         all_raw_files.append(item)
                 except: continue
 
-        # Quét cả 2 nhánh
-        scan_and_tag(f_tncn_root['id'] if f_tncn_root else None, "TNCN")
-        scan_and_tag(f_gtgt_root['id'] if f_gtgt_root else None, "GTGT")
+        # --- TÌM CÁC NHÁNH THƯ MỤC ---
+        f_thue = find_child_folder_by_name_contain(service, company_root_id, "THUE")
+        f_cty = find_child_folder_by_name_contain(service, company_root_id, "CONG-TY")
 
-        # 3. Phân loại dữ liệu vào cấu trúc 4 Quý + YEAR
+        # A. QUÉT NHÁNH THUẾ (TNCN & GTGT)
+        if f_thue:
+            f_year_thue = find_child_folder_exact(service, f_thue['id'], str(year))
+            if f_year_thue:
+                # Nhánh TNCN
+                f_tncn = find_child_folder_by_name_contain(service, f_year_thue['id'], "NHAN-CA-NHAN")
+                scan_and_tag(f_tncn['id'] if f_tncn else None, "THUE-TNCN")
+                # Nhánh GTGT (Lấy bảng lương thuế)
+                f_gtgt = find_child_folder_by_name_contain(service, f_year_thue['id'], "GIA-TRI-GIA-TANG")
+                scan_and_tag(f_gtgt['id'] if f_gtgt else None, "THUE-GTGT")
+
+        # B. QUÉT NHÁNH CÔNG TY (5-LUONG) - ĐÂY LÀ PHẦN MỚI BẠN YÊU CẦU
+        if f_cty:
+            f_year_cty = find_child_folder_exact(service, f_cty['id'], str(year))
+            if f_year_cty:
+                f_luong_root = find_child_folder_by_name_contain(service, f_year_cty['id'], "5-LUONG")
+                if f_luong_root:
+                    # Tìm folder BANG-LUONG-CHAM-CONG
+                    f_target = find_child_folder_by_name_contain(service, f_luong_root['id'], "BANG-LUONG")
+                    if not f_target: f_target = f_luong_root # Nếu ko có folder con thì quét thẳng folder Luong
+                    
+                    scan_and_tag(f_target['id'], "CTY-LUONG")
+
+        # --- PHÂN LOẠI DỮ LIỆU ---
         all_periods = ["Q1", "Q2", "Q3", "Q4", "YEAR"]
         structure = {p: {"payroll": [], "timesheet": [], "contract": [], "finalization": [], "others": []} for p in all_periods}
         unclassified = []
 
         for f in all_raw_files:
             q_label, f_type = detect_quarter_and_type(f['name'])
-            
             file_info = {
-                "id": f['id'],
-                "name": f['name'],
-                "link": f.get('webViewLink', '#'),
-                "mime_type": f['mimeType'],
-                "created_at": f.get('createdTime'),
-                "origin": f.get('origin', 'TNCN') # Trả về cho FE hiển thị
+                "id": f['id'], "name": f['name'], "link": f.get('webViewLink', '#'),
+                "mime_type": f['mimeType'], "created_at": f.get('createdTime'),
+                "origin": f.get('origin', 'UNKNOWN')
             }
-            
             if q_label != "UNKNOWN":
                 target_group = f_type if f_type != "other" else "others"
                 structure[q_label][target_group].append(file_info)
             else:
                 unclassified.append(file_info)
 
-        return {
-            "status": "success",
-            "structure": structure,
-            "unclassified": unclassified,
-            "total_count": len(all_raw_files)
-        }
+        return {"status": "success", "structure": structure, "unclassified": unclassified, "total_count": len(all_raw_files)}
 
     except Exception as e:
-        print(f"❌ LỖI TNCN SERVICE: {e}")
         traceback.print_exc()
         return {"status": "error", "message": str(e)}

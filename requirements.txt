@@ -11,4 +11,5 @@ google-auth-httplib2==0.2.1
 SQLAlchemy==2.0.45
 alembic==1.17.2
 psycopg2-binary==2.9.11
+PyMySQL==1.1.1
 requests==2.32.5

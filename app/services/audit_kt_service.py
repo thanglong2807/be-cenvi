@@ -8,6 +8,12 @@ from app.services.drive_service import (
 )
 from app.services.audit_service import get_file_content_logic
 
+# app/services/audit_kt_service.py
+import xml.etree.ElementTree as ET
+
+# app/services/audit_kt_service.py
+import xml.etree.ElementTree as ET
+
 def get_kt_audit_data(service, company_root_id, year, company_code):
     print(f"--- 🚀 ĐANG TRUY QUÉT ĐỆ QUY TOÀN BỘ CÂY THƯ MỤC KẾ TOÁN ---")
 
@@ -57,12 +63,6 @@ def get_kt_audit_data(service, company_root_id, year, company_code):
 
 
 
-
-# app/services/audit_kt_service.py
-import xml.etree.ElementTree as ET
-
-# app/services/audit_kt_service.py
-import xml.etree.ElementTree as ET
 
 def get_xml_thuyet_minh_tags(xml_content):
     """
@@ -135,7 +135,7 @@ def get_all_files_recursive(service, parent_id, folder_path=""):
         includeItemsFromAllDrives=True,
         pageSize=1000
     ).execute()
-    
+
     items = results.get('files', [])
 
     for item in items:

@@ -1,12 +1,16 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from app.core.config import settings
 
-# Tạo file database.db ngay tại thư mục gốc
-SQLALCHEMY_DATABASE_URL = "sqlite:///./cenvi_audit.db"
+# Mặc định dùng SQLite nếu không có DATABASE_URL
+SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL or "sqlite:///./cenvi_audit.db"
+
+# Chỉ cần connect_args cho SQLite
+connect_args = {"check_same_thread": False} if SQLALCHEMY_DATABASE_URL.startswith("sqlite") else {}
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL, connect_args=connect_args
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

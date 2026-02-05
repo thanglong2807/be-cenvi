@@ -11,22 +11,30 @@ from app.core.database import get_db
 from app.models.audit import AuditSession
 from app.db.repositories.folder_repo import FolderRepository
 from app.db.repositories.employee_repo import EmployeeRepository
+from app.services.audit_saoke_service import get_saoke_init_data, get_bank_files_logic, parse_saoke_xml_indicator
 
 # --- Cấu hình Services ---
-from app.services.drive_service import get_drive_service
+from app.services.drive_service import (
+    get_drive_service, 
+    get_all_files_recursive, 
+    find_child_folder_by_name_contain,
+    find_child_folder_exact
+)
 from app.services.audit_service import get_file_content_logic, get_xml_thuyet_minh_logic
 from app.services.audit_gtgt_service import get_gtgt_audit_data
 from app.services.audit_tndn_service import get_tndn_audit_data
 from app.services.audit_tncn_service import get_tncn_audit_data
 from app.services.audit_kt_service import get_kt_audit_data, get_xml_thuyet_minh_tags
+from app.services.audit_hdon_service import get_hdon_audit_data
+from app.services.audit_htk_service import get_htk_init_data, get_inventory_files_logic, parse_htk_xml_indicators
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
 
 folder_repo = FolderRepository()
 employee_repo = EmployeeRepository()
 
-# Danh sách các hạng mục hiển thị 1 chấm to (theo năm)
-YEARLY_CATEGORIES = ["TNDN", "KT", "HTK", "TNCN"]
+# Các hạng mục hiển thị 1 chấm to trên Ma trận
+YEARLY_CATEGORIES = ["TNDN", "KT", "HTK", "TNCN", "Saoke"] 
 
 # --- CÁC CLASS PAYLOAD ---
 class AuditActionPayload(BaseModel):
@@ -38,8 +46,14 @@ class AuditActionPayload(BaseModel):
     checklist_data: List[dict]
     overall_note: Optional[str] = ""
 
+class FetchInvoicesPayload(BaseModel):
+    folder_id: int
+    xml_drive_id: str  # Sửa từ string thành str
+    year: int
+    period: str        # Sửa từ string thành str
+
 # =========================================================================
-# 1. API MA TRẬN TRẠNG THÁI (MÀN HÌNH CHÍNH)
+# 1. API MA TRẬN TRẠNG THÁI (DASHBOARD CHÍNH)
 # =========================================================================
 @router.get("/matrix")
 def get_audit_matrix(year: int = datetime.now().year, db: Session = Depends(get_db)):
@@ -47,7 +61,6 @@ def get_audit_matrix(year: int = datetime.now().year, db: Session = Depends(get_
     categories = ["GTGT", "TNCN", "TNDN", "KT", "Hdon", "Saoke", "Luong", "HTK"]
     periods = ["Q1", "Q2", "Q3", "Q4"]
     
-    # Lấy toàn bộ session của năm để tối ưu tốc độ
     all_sessions = db.query(AuditSession).filter(AuditSession.year == year).all()
     
     matrix = []
@@ -88,76 +101,123 @@ def get_audit_matrix(year: int = datetime.now().year, db: Session = Depends(get_
 # 2. NHÓM API ĐỐI SOÁT CHI TIẾT (KẾT HỢP DRIVE + SQL)
 # =========================================================================
 
-# --- ĐỐI SOÁT GTGT ---
+def get_session_info(db, f_id, cat, year, period):
+    """Helper lấy checklist và note đã lưu trong SQL"""
+    session = db.query(AuditSession).filter(
+        AuditSession.folder_id == f_id,
+        AuditSession.category == cat,
+        AuditSession.year == year,
+        AuditSession.period == period
+    ).first()
+    return {
+        "checklist_data": session.checklist_data if session else [],
+        "overall_note": session.overall_note if session else "",
+        "session_status": session.status if session else "empty"
+    }
+
 @router.get("/compare-gtgt/{folder_id}")
 def compare_gtgt(folder_id: int, year: int, period: str, db: Session = Depends(get_db)):
     folder = folder_repo.get_by_id(folder_id)
     root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
     c_code = getattr(folder, 'company_code', None) or folder.get('company_code')
-
-    session = db.query(AuditSession).filter(AuditSession.folder_id == folder_id, AuditSession.category == "GTGT", AuditSession.period == period, AuditSession.year == year).first()
     try:
         service = get_drive_service()
         drive_data = get_gtgt_audit_data(service, root_id, year, period, c_code)
-        drive_data["checklist_data"] = session.checklist_data if session else []
-        drive_data["overall_note"] = session.overall_note if session else ""
-        return drive_data
+        sql_info = get_session_info(db, folder_id, "GTGT", year, period)
+        return {**drive_data, **sql_info}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- ĐỐI SOÁT TNDN ---
 @router.get("/compare-tndn/{folder_id}")
 def compare_tndn(folder_id: int, year: int, db: Session = Depends(get_db)):
     folder = folder_repo.get_by_id(folder_id)
     root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
     c_code = getattr(folder, 'company_code', None) or folder.get('company_code')
-
-    session = db.query(AuditSession).filter(AuditSession.folder_id == folder_id, AuditSession.category == "TNDN", AuditSession.period == "YEAR", AuditSession.year == year).first()
     try:
         service = get_drive_service()
         drive_data = get_tndn_audit_data(service, root_id, year, c_code)
-        drive_data["checklist_data"] = session.checklist_data if session else []
-        drive_data["overall_note"] = session.overall_note if session else ""
-        return drive_data
+        sql_info = get_session_info(db, folder_id, "TNDN", year, "YEAR")
+        return {**drive_data, **sql_info}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- ĐỐI SOÁT TNCN ---
 @router.get("/compare-tncn/{folder_id}")
 def compare_tncn(folder_id: int, year: int, db: Session = Depends(get_db)):
     folder = folder_repo.get_by_id(folder_id)
     root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
     c_code = getattr(folder, 'company_code', None) or folder.get('company_code')
-
-    session = db.query(AuditSession).filter(AuditSession.folder_id == folder_id, AuditSession.category == "TNCN", AuditSession.year == year, AuditSession.period == "YEAR").first()
     try:
         service = get_drive_service()
         drive_data = get_tncn_audit_data(service, root_id, year, c_code)
-        drive_data["checklist_data"] = session.checklist_data if session else []
-        drive_data["overall_note"] = session.overall_note if session else ""
-        return drive_data
+        sql_info = get_session_info(db, folder_id, "TNCN", year, "YEAR")
+        return {**drive_data, **sql_info}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- ĐỐI SOÁT KẾ TOÁN (KT) ---
 @router.get("/compare-kt/{folder_id}")
 def compare_kt(folder_id: int, year: int, db: Session = Depends(get_db)):
     folder = folder_repo.get_by_id(folder_id)
     root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
     c_code = getattr(folder, 'company_code', None) or folder.get('company_code')
-
-    session = db.query(AuditSession).filter(AuditSession.folder_id == folder_id, AuditSession.category == "KT", AuditSession.year == year, AuditSession.period == "YEAR").first()
     try:
         service = get_drive_service()
         drive_data = get_kt_audit_data(service, root_id, year, c_code)
-        drive_data["checklist_data"] = session.checklist_data if session else []
-        drive_data["overall_note"] = session.overall_note if session else ""
-        return drive_data
+        sql_info = get_session_info(db, folder_id, "KT", year, "YEAR")
+        return {**drive_data, **sql_info}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 # =========================================================================
-# 3. NHÓM API XỬ LÝ TỆP TIN & THUYẾT MINH
+# 3. NHÓM API HÓA ĐƠN (HDON)
+# =========================================================================
+
+@router.get("/hdon/tax-files/{folder_id}")
+def get_hdon_tax_files(folder_id: int, year: int, period: str):
+    folder = folder_repo.get_by_id(folder_id)
+    root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
+    try:
+        service = get_drive_service()
+        data = get_gtgt_audit_data(service, root_id, year, period, folder.get('company_code'))
+        xml_files = [f for f in data.get('files', []) if "xml" in f['mime_type']]
+        return {"files": xml_files}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/hdon/fetch-invoices")
+def fetch_invoices_by_xml(payload: FetchInvoicesPayload):
+    service = get_drive_service()
+    try:
+        parsed = get_file_content_logic(service, payload.xml_drive_id)
+        d = parsed.get('data', {})
+        val23 = float(d.get('ct23', 0))
+        val34 = float(d.get('ct34', 0))
+
+        folder = folder_repo.get_by_id(payload.folder_id)
+        root_id = folder.get('root_folder_id')
+        q_num = payload.period.replace("Q", "")
+
+        f_cty = find_child_folder_by_name_contain(service, root_id, "TAI-LIEU-CONG-TY")
+        f_year = find_child_folder_exact(service, f_cty['id'], str(payload.year)) if f_cty else None
+
+        buy_files, sell_files = [], []
+        if f_year:
+            if val23 > 0:
+                f_buy_root = find_child_folder_by_name_contain(service, f_year['id'], "1-HOA-DON-MUA")
+                if f_buy_root:
+                    f_q_buy = find_child_folder_by_name_contain(service, f_buy_root['id'], f"HDM_QUY-{q_num}")
+                    if f_q_buy: buy_files = get_all_files_recursive(service, f_q_buy['id'])
+            if val34 > 0:
+                f_sell_root = find_child_folder_by_name_contain(service, f_year['id'], "2-HOA-DON-BAN")
+                if f_sell_root:
+                    f_q_sell = find_child_folder_by_name_contain(service, f_sell_root['id'], f"HDB_QUY-{q_num}")
+                    if f_q_sell: sell_files = get_all_files_recursive(service, f_q_sell['id'])
+
+        return {"val23": val23, "val34": val34, "buy_files": buy_files, "sell_files": sell_files, "has_data": (val23 > 0 or val34 > 0)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# =========================================================================
+# 4. NHÓM TIỆN ÍCH FILE (VIEWER / DOWNLOAD)
 # =========================================================================
 
 @router.get("/file-content-raw/{drive_id}")
@@ -178,8 +238,20 @@ def get_tm_only(drive_id: str):
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Lỗi bóc tách thuyết minh: {str(e)}")
 
+@router.get("/files-only/{folder_id}")
+def get_files_only(folder_id: int, year: int, period: str):
+    folder = folder_repo.get_by_id(folder_id)
+    root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
+    try:
+        service = get_drive_service()
+        all_files = get_all_files_recursive(service, root_id)
+        relevant_files = [f for f in all_files if str(year) in f['name'] or period.upper() in f['name'].upper()]
+        return {"status": "success", "files": relevant_files}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # =========================================================================
-# 4. API LƯU HÀNH ĐỘNG (XÁC NHẬN/DUYỆT/SỬA)
+# 5. API LƯU HÀNH ĐỘNG (XÁC NHẬN / DUYỆT / SỬA)
 # =========================================================================
 @router.post("/action")
 def handle_audit_action(payload: AuditActionPayload, db: Session = Depends(get_db)):
@@ -213,3 +285,139 @@ def handle_audit_action(payload: AuditActionPayload, db: Session = Depends(get_d
 
     db.commit()
     return {"status": "success", "message": "Dữ liệu đã được lưu thành công"}
+
+
+# app/api/v1/audit.py
+
+@router.get("/hdon/all-files/{folder_id}")
+def get_all_hdon_files(folder_id: int, year: int, period: str):
+    """
+    API phục vụ sếp chọn file thủ công cho mục Hóa đơn.
+    Gom file từ 3 folder: Thuế GTGT, Hóa đơn mua, Hóa đơn bán.
+    """
+    folder = folder_repo.get_by_id(folder_id)
+    if not folder: raise HTTPException(status_code=404)
+    
+    root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
+    q_num = period.replace("Q", "")
+    
+    try:
+        from app.services.drive_service import get_drive_service, find_child_folder_by_name_contain, get_all_files_recursive, find_child_folder_exact
+        service = get_drive_service()
+
+        # 1. Lấy file XML từ nhánh THUẾ (Để sếp chọn làm tờ khai gốc)
+        tax_files = []
+        f_thue = find_child_folder_by_name_contain(service, root_id, "THUE")
+        if f_thue:
+            f_year = find_child_folder_exact(service, f_thue['id'], str(year))
+            f_gtgt = find_child_folder_by_name_contain(service, f_year['id'], "GIA-TRI-GIA-TANG") if f_year else None
+            f_q = find_child_folder_by_name_contain(service, f_gtgt['id'], f"QUY {q_num}") if f_gtgt else None
+            if not f_q and f_gtgt: f_q = find_child_folder_by_name_contain(service, f_gtgt['id'], f"QUÝ {q_num}")
+            if f_q: tax_files = get_all_files_recursive(service, f_q['id'])
+
+        # 2. Lấy file từ folder 1-HOA-DON-MUA của nhánh CÔNG TY
+        buy_files = []
+        f_cty = find_child_folder_by_name_contain(service, root_id, "TAI-LIEU-CONG-TY")
+        if f_cty:
+            f_year_c = find_child_folder_exact(service, f_cty['id'], str(year))
+            f_buy_root = find_child_folder_by_name_contain(service, f_year_c['id'], "1-HOA-DON-MUA") if f_year_c else None
+            f_q_buy = find_child_folder_by_name_contain(service, f_buy_root['id'], f"HDM_QUY-{q_num}") if f_buy_root else None
+            if f_q_buy: buy_files = get_all_files_recursive(service, f_q_buy['id'])
+
+        # 3. Lấy file từ folder 2-HOA-DON-BAN của nhánh CÔNG TY
+        sell_files = []
+        f_sell_root = find_child_folder_by_name_contain(service, f_year_c['id'], "2-HOA-DON-BAN") if f_year_c else None
+        f_q_sell = find_child_folder_by_name_contain(service, f_sell_root['id'], f"HDB_QUY-{q_num}") if f_sell_root else None
+        if f_q_sell: sell_files = get_all_files_recursive(service, f_q_sell['id'])
+
+        return {
+            "tax_xml_list": tax_files,
+            "buy_folder_files": buy_files,
+            "sell_folder_files": sell_files
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/saoke/init/{folder_id}")
+def saoke_init(folder_id: int, year: int, db: Session = Depends(get_db)):
+    folder = folder_repo.get_by_id(folder_id)
+    if not folder: raise HTTPException(status_code=404)
+    root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
+    
+    # Lấy checklist cũ từ SQL (nếu có)
+    session = db.query(AuditSession).filter(
+        AuditSession.folder_id == folder_id,
+        AuditSession.category == "Saoke",
+        AuditSession.year == year,
+        AuditSession.period == "YEAR"
+    ).first()
+
+    try:
+        from app.services.audit_saoke_service import get_saoke_init_data, get_bank_files_logic
+        service = get_drive_service()
+        
+        return {
+            "tax_xml_files": get_saoke_init_data(service, root_id, year),
+            "bank_drive_files": get_bank_files_logic(service, root_id, year),
+            "checklist_data": session.checklist_data if session else [],
+            "overall_note": session.overall_note if session else ""
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+@router.get("/saoke/check-112/{drive_id}")
+def check_xml_112(drive_id: str):
+    service = get_drive_service()
+    content = service.files().get_media(fileId=drive_id, supportsAllDrives=True).execute()
+    val = parse_saoke_xml_indicator(content)
+    return {"ct112": val}
+# app/api/v1/audit.py
+
+@router.get("/saoke/check-112/{drive_id}")
+def check_xml_112(drive_id: str):
+    service = get_drive_service()
+    try:
+        # Tải nội dung file XML từ Drive
+        content = service.files().get_media(fileId=drive_id, supportsAllDrives=True).execute()
+        
+        # Gọi hàm xử lý đã định nghĩa ở Bước 1
+        val = parse_saoke_xml_indicator(content)
+        
+        return {"ct112": val}
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# app/api/v1/audit.py
+
+@router.get("/htk/init/{folder_id}")
+def htk_init(folder_id: int, year: int):
+    folder = folder_repo.get_by_id(folder_id)
+    root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
+    service = get_drive_service()
+    return {
+        "source_xml_files": get_htk_init_data(service, root_id, year),
+        "inventory_drive_files": get_inventory_files_logic(service, root_id, year)
+    }
+
+@router.get("/htk/check-codes/{drive_id}")
+def check_htk_xml(drive_id: str):
+    service = get_drive_service()
+    content = service.files().get_media(fileId=drive_id, supportsAllDrives=True).execute()
+    return parse_htk_xml_indicators(content)
+
+
+# app/api/v1/audit.py
+from app.services.audit_luong_service import get_luong_init_data
+
+@router.get("/luong/init/{folder_id}")
+def luong_init(folder_id: int, year: int, period: str):
+    folder = folder_repo.get_by_id(folder_id)
+    root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
+    try:
+        service = get_drive_service()
+        return get_luong_init_data(service, root_id, year, period)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
