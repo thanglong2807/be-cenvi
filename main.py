@@ -28,6 +28,9 @@ from app.core.config import settings
 # ====================================================================
 # BACKGROUND TASK - POLLING GOOGLE SHEET
 # ====================================================================
+def _can_poll_sheet() -> bool:
+    return bool(settings.GOOGLE_SERVICE_ACCOUNT_FILE and settings.ROOT_DRIVE_FOLDER_ID and settings.GOOGLE_SHEET_ID)
+
 async def poll_sheet_updates():
     """
     Background task chạy định kỳ để kiểm tra Google Sheet
@@ -37,6 +40,9 @@ async def poll_sheet_updates():
     
     while True:
         try:
+            if not _can_poll_sheet():
+                await asyncio.sleep(settings.SHEET_POLLING_INTERVAL)
+                continue
             # Lấy dữ liệu mới từ Sheet (để None để dùng default từ config)
             new_data = dashboard_service.fetch_data(None)
             
@@ -59,14 +65,19 @@ async def lifespan(app: FastAPI):
     Chạy startup task khi app khởi động
     """
     # Startup
-    task = asyncio.create_task(poll_sheet_updates())
-    print("✅ Background polling task khởi động")
+    task = None
+    if _can_poll_sheet():
+        task = asyncio.create_task(poll_sheet_updates())
+        print("✅ Background polling task khởi động")
+    else:
+        print("⚠️ Bỏ qua polling Google Sheet (thiếu env GOOGLE_SERVICE_ACCOUNT_FILE/ROOT_DRIVE_FOLDER_ID/GOOGLE_SHEET_ID)")
     
     yield
     
     # Shutdown
-    task.cancel()
-    print("🛑 Background polling task dừng")
+    if task:
+        task.cancel()
+        print("🛑 Background polling task dừng")
 
 
 app = FastAPI(

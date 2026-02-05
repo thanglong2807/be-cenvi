@@ -14,21 +14,21 @@ class Settings(BaseSettings):
     DATABASE_URL: Optional[str] = None 
 
     # --- 3. CẤU HÌNH GOOGLE (TỪ .ENV) ---
-    # Bắt buộc phải có đường dẫn file key
-    GOOGLE_SERVICE_ACCOUNT_FILE: str = Field(..., env="GOOGLE_SERVICE_ACCOUNT_FILE")
+    # Optional để tránh crash khi deploy chưa có env
+    GOOGLE_SERVICE_ACCOUNT_FILE: Optional[str] = Field(default=None, env="GOOGLE_SERVICE_ACCOUNT_FILE")
     
     # Scope mặc định
     GOOGLE_DRIVE_SCOPES: str = "https://www.googleapis.com/auth/drive"
 
-    # ID Folder gốc (Bắt buộc)
-    ROOT_DRIVE_FOLDER_ID: str = Field(..., env="ROOT_DRIVE_FOLDER_ID")
+    # ID Folder gốc (Optional)
+    ROOT_DRIVE_FOLDER_ID: Optional[str] = Field(default=None, env="ROOT_DRIVE_FOLDER_ID")
     
     # Folder cha (Không bắt buộc, để chuỗi rỗng nếu không dùng)
     COMPANY_PARENT_FOLDER_ID: str = ""
 
     # --- 4. CẤU HÌNH GOOGLE SHEETS (DASHBOARD) ---
-    # ID của Google Sheet chứa dữ liệu báo cáo doanh thu
-    GOOGLE_SHEET_ID: str = Field(default="1KF68El6c5-_2QwybKa2k-3N149L-xYU2-h6SsSAUXno", env="GOOGLE_SHEET_ID")
+    # ID của Google Sheet chứa dữ liệu báo cáo doanh thu (Optional)
+    GOOGLE_SHEET_ID: Optional[str] = Field(default=None, env="GOOGLE_SHEET_ID")
     
     # Sheet range: Format 'SheetName'!A1:Z100
     # Với sheet name có khoảng trắng/ký tự đặc biệt, dùng ngoặc kép
