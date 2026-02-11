@@ -100,6 +100,9 @@ class DashboardSheetService:
         if not self.service:
             print("❌ Sheets Client không khả dụng")
             return None
+        if not self.sheet_id:
+            print("❌ Thiếu GOOGLE_SHEET_ID nên không thể fetch dữ liệu từ Sheet")
+            return None
         
         try:
             result = self.service.spreadsheets().values().get(
