@@ -12,7 +12,7 @@ def get_gtgt_audit_data(service, company_root_id, year, period, company_code):
     """
     Xử lý đối soát GTGT theo từng Quý:
     1. Tìm đường dẫn: TAI-LIEU-THUE -> Năm -> GIA-TRI-GIA-TANG -> QUY X
-    2. Quét đệ quy toàn bộ tệp tin trong subtree của Quý
+    2. Nếu QUY X không có tệp (hoặc không tồn tại), fallback quét toàn bộ GIA-TRI-GIA-TANG
     3. Robot phân tích nội dung từng tệp để gợi ý tên chuẩn
     4. Nếu thấy file Tờ khai XML -> Bóc tách chính xác ct23, 24, 27, 28
     """
@@ -41,15 +41,23 @@ def get_gtgt_audit_data(service, company_root_id, year, period, company_code):
         if not f_quarter:
             f_quarter = find_child_folder_by_name_contain(service, f_gtgt_root['id'], f"QUÝ {q_num}")
 
-        if not f_quarter:
-            return {"status": "error", "message": f"Không tìm thấy folder của {period}"}
-
-        print(f"📍 Đã vào folder: {f_quarter['name']}")
-
         # --- BƯỚC 2: QUÉT ĐỆ QUY LẤY TOÀN BỘ FILE ---
-        # Hàm này lấy sạch file ở mọi cấp độ folder con bên trong Quý
-        raw_files = get_all_files_recursive(service, f_quarter['id'])
-        print(f"🔎 Tổng số tệp tin tìm thấy (đệ quy): {len(raw_files)}")
+        # Ưu tiên quét folder Quý; nếu không có file thì fallback quét toàn bộ GIA-TRI-GIA-TANG
+        scan_folder = None
+        raw_files = []
+
+        if f_quarter:
+            print(f"📍 Đã vào folder Quý: {f_quarter['name']}")
+            raw_files = get_all_files_recursive(service, f_quarter['id'])
+            print(f"🔎 Tổng số tệp tin trong {f_quarter['name']}: {len(raw_files)}")
+            if raw_files:
+                scan_folder = f_quarter
+
+        if not scan_folder:
+            print("📂 Không có file trong folder Quý hoặc không tìm thấy folder Quý, fallback quét GIA-TRI-GIA-TANG")
+            raw_files = get_all_files_recursive(service, f_gtgt_root['id'])
+            print(f"🔎 Tổng số tệp tin trong {f_gtgt_root['name']}: {len(raw_files)}")
+            scan_folder = f_gtgt_root
 
         # --- BƯỚC 3: PHÂN TÍCH NỘI DUNG VÀ BÓC SỐ LIỆU ---
         files_to_review = []
@@ -96,7 +104,7 @@ def get_gtgt_audit_data(service, company_root_id, year, period, company_code):
 
         return {
             "status": "success",
-            "folder_name": f_quarter['name'],
+            "folder_name": scan_folder['name'],
             "total_files": len(files_to_review),
             "xml_stats": xml_stats,
             "files": files_to_review

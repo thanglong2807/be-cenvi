@@ -1,0 +1,18 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: be-cenvi:local
+    container_name: cenvi_backend
+    restart: unless-stopped
+    ports:
+      - "8100:8100"
+    env_file:
+      - .env
+    environment:
+      - DOCKER=true
+    volumes:
+      - ./credentials:/app/credentials:ro
+      - ./app/data:/app/app/data
+      - ./cenvi_audit.db:/app/cenvi_audit.db

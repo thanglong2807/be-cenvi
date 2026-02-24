@@ -1,5 +1,5 @@
 {
-  "last_id": 252,
+  "last_id": 253,
   "items": [
     {
       "company_code": "2025KH51",
@@ -3198,6 +3198,19 @@
       "updated_at": "2026-01-28T07:27:12.481961",
       "id": 252,
       "root_folder_id": "1RKHfMLRZx9JXvAHUPjIQVDteAPbUrrNd"
+    },
+    {
+      "company_code": "2026KH11",
+      "company_name": "BBG-VIET-NAM",
+      "mst": "5801563042",
+      "year": 2026,
+      "template": "STANDARD",
+      "manager_employee_id": 8,
+      "status": "active",
+      "created_at": "2026-02-24T03:54:41.444507",
+      "updated_at": "2026-02-24T04:17:38.558623",
+      "id": 253,
+      "root_folder_id": "1KEi0iGUIk9keoFvi1EryR7wgUpRkHG6e"
     }
   ]
 }

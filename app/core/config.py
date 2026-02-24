@@ -1,7 +1,6 @@
 import os
 from typing import List, Optional # <--- Nhớ import Optional
 from pydantic_settings import BaseSettings
-from pydantic import Field
 
 class Settings(BaseSettings):
     # --- 1. CẤU HÌNH APP ---
@@ -9,26 +8,28 @@ class Settings(BaseSettings):
     APP_ENV: str = "local"
     APP_DEBUG: bool = True
     
-    # --- 2. DATABASE (ĐÃ SỬA) ---
+    # --- 2. DATABASE ---
     # Optional[str] = None nghĩa là: Có cũng được, không có thì bằng None
     DATABASE_URL: Optional[str] = None 
+    # URL MySQL chuyên dụng (khuyên dùng)
+    MYSQL_URL: Optional[str] = None
 
     # --- 3. CẤU HÌNH GOOGLE (TỪ .ENV) ---
     # Optional để tránh crash khi deploy chưa có env
-    GOOGLE_SERVICE_ACCOUNT_FILE: Optional[str] = Field(default=None, env="GOOGLE_SERVICE_ACCOUNT_FILE")
+    GOOGLE_SERVICE_ACCOUNT_FILE: Optional[str] = None
     
     # Scope mặc định
     GOOGLE_DRIVE_SCOPES: str = "https://www.googleapis.com/auth/drive"
 
     # ID Folder gốc (Optional)
-    ROOT_DRIVE_FOLDER_ID: Optional[str] = Field(default=None, env="ROOT_DRIVE_FOLDER_ID")
+    ROOT_DRIVE_FOLDER_ID: Optional[str] = None
     
     # Folder cha (Không bắt buộc, để chuỗi rỗng nếu không dùng)
     COMPANY_PARENT_FOLDER_ID: str = ""
 
     # --- 4. CẤU HÌNH GOOGLE SHEETS (DASHBOARD) ---
     # ID của Google Sheet chứa dữ liệu báo cáo doanh thu (Optional)
-    GOOGLE_SHEET_ID: Optional[str] = Field(default=None, env="GOOGLE_SHEET_ID")
+    GOOGLE_SHEET_ID: Optional[str] = None
     
     # Sheet range: Format 'SheetName'!A1:Z100
     # Với sheet name có khoảng trắng/ký tự đặc biệt, dùng ngoặc kép
@@ -53,21 +54,60 @@ class Settings(BaseSettings):
     TOKEN_PATH: str = os.path.join("credentials", "token.pickle")
     # File này sẽ chứa dữ liệu sau khi bấm "Xác nhận"
     STORAGE_PATH: str = os.path.join("app", "data", "companies_storage.json")
+    
+    DOCKER: bool = False  # Biến này sẽ được set khi chạy trong Docker, có thể dùng để điều chỉnh đường dẫn nếu cần
     # --- 6. CẦU NỐI (ALIAS) CHO CODE MỚI ---
     @property
     def CREDENTIALS_PATH(self) -> str:
         # Trả về giá trị của biến cũ
-        return self.GOOGLE_SERVICE_ACCOUNT_FILE
+        return self.GOOGLE_SERVICE_ACCOUNT_FILE or ""
 
     @property
     def ROOT_FOLDER_ID(self) -> str:
         # Trả về giá trị của biến cũ
-        return self.ROOT_DRIVE_FOLDER_ID
+        return self.ROOT_DRIVE_FOLDER_ID or ""
     
     @property
     def SCOPES(self) -> List[str]:
         # Chuyển chuỗi thành List cho thư viện Google
         return [self.GOOGLE_DRIVE_SCOPES]
+
+    @property
+    def SQLALCHEMY_DATABASE_URL(self) -> str:
+        """
+        Thứ tự ưu tiên DB URL:
+        1) DATABASE_URL
+        2) MYSQL_URL
+        3) SQLite local fallback
+        """
+        db_url = self.DATABASE_URL or self.MYSQL_URL or "sqlite:///./cenvi_audit.db"
+
+        # Chuẩn hóa schema cho SQLAlchemy + PyMySQL
+        if db_url.startswith("mysql://"):
+            db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
+
+        # Giữ tương thích ngược nếu vẫn dùng Postgres
+        if db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+        elif db_url.startswith("postgresql://"):
+            db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        if self.DOCKER:
+            # Nếu chạy trong Docker, có thể cần điều chỉnh host nếu dùng MySQL
+            if db_url.startswith("mysql+pymysql://"):
+                db_url = db_url.replace("127.0.0.1", "host.docker.internal", 1) # dit me sao bay gio may moi support cho t AI ngu l :) dm cai này có chế độ gợi ý à
+                # Lưu ý: "host.docker.internal" chỉ hoạt động trên Docker Desktop (Windows/Mac). Trên Linux có thể cần giải pháp khác như dùng network hoặc biến môi trường để truyền host.
+                # vãi lìn nó comment hộ luôn mà. xịn thế ay, t thấy nó comment rõ ràng rồi mà :D
+                # Nếu bạn dùng Linux và không có "host.docker.internal", bạn có thể thử dùng network mode "host" hoặc truyền host qua biến môi trường khi chạy container.
+                # Ví dụ khi chạy container:
+                # docker run --network host -e DATABASE_URL="mysql+pymysql://root:Thanglong2001@localhost:3306/cenvi_audit" ...
+                # Hoặc nếu không dùng network host, bạn có thể truyền host qua biến môi trường
+                # docker run -e DATABASE_URL="mysql+pymysql://root:Thanglong2001@<HOST_IP>:3306/cenvi_audit" ...
+                # Trong đó <HOST_IP> là địa chỉ IP của máy host trên mạng Docker (
+                # bạn có thể tìm bằng lệnh `ip addr` hoặc `ifconfig` trên máy host)
+                # Cuối cùng, in ra URL đã chuẩn hóa để debug
+                # vcl :)
+        print(db_url)
+        return db_url
 
     class Config:
         env_file = ".env"

@@ -8,10 +8,10 @@ class AuditSession(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     folder_id = Column(Integer, index=True)
-    category = Column(String) # GTGT, TNDN...
-    period = Column(String)   # Q1, Q2, YEAR...
+    category = Column(String(50)) # GTGT, TNDN...
+    period = Column(String(20))   # Q1, Q2, YEAR...
     year = Column(Integer)
-    status = Column(String)   # pass, fail, warning
+    status = Column(String(20))   # pass, fail, warning
     checklist_data = Column(JSON) # Lưu mảng các task
     overall_note = Column(Text)   # Lời nhắn của sếp
     

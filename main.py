@@ -44,7 +44,7 @@ async def poll_sheet_updates():
                 await asyncio.sleep(settings.SHEET_POLLING_INTERVAL)
                 continue
             # Lấy dữ liệu mới từ Sheet (để None để dùng default từ config)
-            new_data = dashboard_service.fetch_data(None)
+            new_data = dashboard_service.fetch_data()
             
             if new_data and dashboard_service.has_changed(new_data):
                 print(f"📢 Phát hiện thay đổi, broadcast tới clients...")
