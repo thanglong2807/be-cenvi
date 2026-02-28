@@ -4,9 +4,71 @@ from io import BytesIO
 from app.services.drive_service import (
     get_drive_service, 
     find_child_folder_by_name_contain, 
-    find_child_folder_exact
+    find_child_folder_exact,
+    get_all_files_recursive
 )
 from app.services.smart_renamer_service import analyze_file_content
+
+
+def find_tax_target_folders_recursive(service, parent_id, keyword_list):
+    """Tìm đệ quy tất cả folder có tên chứa một trong các từ khóa"""
+    matched_folders = []
+    page_token = None
+
+    try:
+        while True:
+            results = service.files().list(
+                q=(
+                    f"'{parent_id}' in parents "
+                    "and mimeType = 'application/vnd.google-apps.folder' "
+                    "and trashed = false"
+                ),
+                fields="nextPageToken, files(id, name, mimeType)",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
+                pageSize=1000,
+                pageToken=page_token
+            ).execute()
+
+            subfolders = results.get('files', [])
+            for folder in subfolders:
+                folder_name_upper = folder.get('name', '').upper()
+                if any(keyword in folder_name_upper for keyword in keyword_list):
+                    matched_folders.append(folder)
+
+                matched_folders.extend(
+                    find_tax_target_folders_recursive(service, folder['id'], keyword_list)
+                )
+
+            page_token = results.get('nextPageToken')
+            if not page_token:
+                break
+    except Exception as e:
+        print(f"⚠️ Lỗi khi đệ quy folder thuế: {e}")
+
+    return matched_folders
+
+
+def download_drive_file_content(service, file_id, mime_type):
+    """Tải nội dung file Drive an toàn: file binary dùng get_media, Docs Editors dùng export_media"""
+    export_map = {
+        "application/vnd.google-apps.document": "text/plain",
+        "application/vnd.google-apps.spreadsheet": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.google-apps.presentation": "application/pdf",
+        "application/vnd.google-apps.drawing": "image/png",
+    }
+
+    try:
+        if mime_type in export_map:
+            return service.files().export_media(
+                fileId=file_id,
+                mimeType=export_map[mime_type]
+            ).execute()
+
+        return service.files().get_media(fileId=file_id, supportsAllDrives=True).execute()
+    except Exception as e:
+        print(f"   ⚠️ Không thể tải nội dung file {file_id}: {e}")
+        return None
 
 def parse_bctc_xml_logic(xml_content):
     """Bóc tách số liệu BCTC từ XML HTKK"""
@@ -28,40 +90,81 @@ def parse_bctc_xml_logic(xml_content):
 
 def get_tndn_audit_data(service, company_root_id, year, company_code):
     print(f"\n--- 🚀 ĐANG QUÉT HỒ SƠ TNDN: {company_code} (Năm {year}) ---")
+    year_str = str(year)
 
     # 1. Tìm folder TAI-LIEU-THUE
     f_thue = find_child_folder_by_name_contain(service, company_root_id, "TAI-LIEU-THUE")
     if not f_thue:
         return {"status": "error", "message": "Không tìm thấy folder TAI-LIEU-THUE"}
 
-    # 2. Tìm folder Năm (Ví dụ: 2024)
-    f_year = find_child_folder_exact(service, f_thue['id'], str(year))
+    # 2. Tìm folder Năm (ưu tiên exact, sau đó kiểm tra năm có nằm trong tên folder)
+    f_year = find_child_folder_exact(service, f_thue['id'], year_str)
     if not f_year:
-        return {"status": "error", "message": f"Không tìm thấy folder năm {year}"}
+        f_year = find_child_folder_by_name_contain(service, f_thue['id'], year_str)
 
-    # 3. Tìm folder THU-NHAP-DOANH-NGHIEP (Hoặc TNDN)
-    f_target = find_child_folder_by_name_contain(service, f_year['id'], "THU-NHAP-DOANH-NGHIEP")
-    if not f_target:
-        f_target = find_child_folder_by_name_contain(service, f_year['id'], "TNDN")
+    scan_folder_name = ""
+    raw_files = []
 
-    if not f_target:
-        return {"status": "error", "message": "Không tìm thấy folder con THU-NHAP-DOANH-NGHIEP hoặc TNDN"}
+    # 3. Nếu có folder năm -> vào nhánh TNDN/THU-NHAP-DOANH-NGHIEP trước
+    if f_year:
+        print(f"📂 Đã tìm thấy folder năm: {f_year['name']} (ID: {f_year['id']})")
 
-    print(f"📍 Đã vào đúng folder: {f_target['name']} (ID: {f_target['id']})")
+        f_target = find_child_folder_by_name_contain(service, f_year['id'], "THU-NHAP-DOANH-NGHIEP")
+        if not f_target:
+            f_target = find_child_folder_by_name_contain(service, f_year['id'], "TNDN")
 
-    # 4. Liệt kê TOÀN BỘ file (Thêm các tham số BẮT BUỘC cho Shared Drive)
-    query = f"'{f_target['id']}' in parents and trashed = false"
-    
-    results = service.files().list(
-        q=query,
-        # Lấy đầy đủ fields để tránh lỗi undefined ở FE
-        fields="files(id, name, mimeType, webViewLink, createdTime)", 
-        supportsAllDrives=True, 
-        includeItemsFromAllDrives=True,
-        pageSize=1000
-    ).execute()
-    
-    raw_files = results.get('files', [])
+        if f_target:
+            scan_folder_name = f_target['name']
+            print(f"📍 Đã vào folder: {f_target['name']} (ID: {f_target['id']})")
+
+            # Luồng cũ: lấy trực tiếp từ folder đích
+            direct_results = service.files().list(
+                q=f"'{f_target['id']}' in parents and trashed = false",
+                fields="files(id, name, mimeType, webViewLink, createdTime)",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
+                pageSize=1000
+            ).execute()
+            raw_files = [
+                item for item in direct_results.get('files', [])
+                if item.get('mimeType') != 'application/vnd.google-apps.folder'
+            ]
+
+            # Nếu luồng cũ không có file -> kiểm tra các folder bên trong và đệ quy lấy toàn bộ file
+            if not raw_files:
+                print("📂 Luồng cũ không có file, fallback đệ quy toàn bộ folder con trong THU-NHAP-DOANH-NGHIEP/TNDN")
+                raw_files = get_all_files_recursive(service, f_target['id'])
+        else:
+            scan_folder_name = f_year['name']
+            print("📂 Không thấy folder THU-NHAP-DOANH-NGHIEP/TNDN, fallback quét toàn bộ folder năm")
+            raw_files = get_all_files_recursive(service, f_year['id'])
+
+    # 4. Nếu không có folder năm -> đệ quy toàn bộ TAI-LIEU-THUE và lọc file theo năm
+    if not f_year:
+        print(f"📂 Không tìm thấy folder có năm {year_str}, tìm đệ quy toàn bộ nhánh TNDN để lọc file theo năm")
+        target_folders = find_tax_target_folders_recursive(
+            service,
+            f_thue['id'],
+            ["THU-NHAP-DOANH-NGHIEP", "TNDN"]
+        )
+
+        if target_folders:
+            unique_files = {}
+            for folder in target_folders:
+                folder_files = get_all_files_recursive(service, folder['id'])
+                for file_item in folder_files:
+                    if year_str in file_item.get('name', ''):
+                        unique_files[file_item['id']] = file_item
+            raw_files = list(unique_files.values())
+            scan_folder_name = f"Nhánh TNDN trong {f_thue['name']} (lọc theo năm {year_str})"
+        else:
+            all_tax_files = get_all_files_recursive(service, f_thue['id'])
+            raw_files = [f for f in all_tax_files if year_str in f.get('name', '')]
+            scan_folder_name = f"{f_thue['name']} (lọc theo năm {year_str})"
+
+    if not raw_files:
+        return {"status": "error", "message": f"Không tìm thấy file nào cho năm {year_str} trong tài liệu thuế"}
+
     print(f"🔎 Google Drive trả về: {len(raw_files)} items")
 
     bctc_content = None
@@ -70,15 +173,17 @@ def get_tndn_audit_data(service, company_root_id, year, company_code):
 
     for f in raw_files:
         try:
-            # Tải nội dung file để phân tích (Cũng cần supportsAllDrives)
-            content = service.files().get_media(fileId=f['id'], supportsAllDrives=True).execute()
-            
+            # Tải nội dung file để phân tích (hỗ trợ cả Google Docs Editors)
+            content = download_drive_file_content(service, f['id'], f.get('mimeType', ''))
+
             # Robot phân tích gợi ý tên
-            suggested = analyze_file_content(f['name'], content, company_code)
+            suggested = f['name']
+            if content:
+                suggested = analyze_file_content(f['name'], content, company_code)
             
             # Nhận diện BCTC
             is_bctc = "BCTC" in f['name'].upper() or "BCTC" in suggested.upper()
-            if is_bctc and "xml" in f['mimeType']:
+            if content and is_bctc and "xml" in f['mimeType']:
                 parsed = parse_bctc_xml_logic(content)
                 if parsed:
                     bctc_content = parsed
@@ -101,7 +206,7 @@ def get_tndn_audit_data(service, company_root_id, year, company_code):
 
     return {
         "status": "success",
-        "folder_name": f_target['name'],
+        "folder_name": scan_folder_name,
         "bctc_found": bctc_found,
         "bctc_content": bctc_content,
         "files": files_to_review,

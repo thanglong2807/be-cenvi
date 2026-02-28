@@ -254,19 +254,27 @@ def get_all_files_recursive(service, parent_id):
     """Tìm tất cả file trong folder và các folder con sâu vô tận"""
     all_files = []
     try:
-        results = service.files().list(
-            q=f"'{parent_id}' in parents and trashed = false",
-            fields="files(id, name, mimeType, webViewLink, createdTime)",
-            supportsAllDrives=True, includeItemsFromAllDrives=True,
-            pageSize=1000
-        ).execute()
-        items = results.get('files', [])
+        page_token = None
+        while True:
+            results = service.files().list(
+                q=f"'{parent_id}' in parents and trashed = false",
+                fields="nextPageToken, files(id, name, mimeType, webViewLink, createdTime)",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
+                pageSize=1000,
+                pageToken=page_token
+            ).execute()
+            items = results.get('files', [])
 
-        for item in items:
-            if item['mimeType'] == 'application/vnd.google-apps.folder':
-                all_files.extend(get_all_files_recursive(service, item['id']))
-            else:
-                all_files.append(item)
-    except:
-        pass
+            for item in items:
+                if item['mimeType'] == 'application/vnd.google-apps.folder':
+                    all_files.extend(get_all_files_recursive(service, item['id']))
+                else:
+                    all_files.append(item)
+
+            page_token = results.get('nextPageToken')
+            if not page_token:
+                break
+    except Exception as e:
+        print(f"Lỗi get_all_files_recursive({parent_id}): {e}")
     return all_files

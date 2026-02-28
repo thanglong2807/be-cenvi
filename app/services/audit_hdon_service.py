@@ -16,22 +16,48 @@ def get_hdon_audit_data(service, company_root_id, year, period, company_code):
     f_year_thue = find_child_folder_exact(service, f_thue['id'], str(year)) if f_thue else None
     f_gtgt_root = find_child_folder_by_name_contain(service, f_year_thue['id'], "GIA-TRI-GIA-TANG") if f_year_thue else None
     f_q_thue = find_child_folder_by_name_contain(service, f_gtgt_root['id'], f"QUY {q_num}") if f_gtgt_root else None
-    if not f_q_thue: f_q_thue = find_child_folder_by_name_contain(service, f_gtgt_root['id'], f"QUÝ {q_num}")
+    
+    if not f_q_thue and f_gtgt_root:
+        f_q_thue = find_child_folder_by_name_contain(service, f_gtgt_root['id'], f"QUÝ {q_num}")
+
+    def _is_xml_file(file_item):
+        mime_type = (file_item.get('mimeType') or '').lower()
+        file_name = (file_item.get('name') or '').lower()
+        return ('xml' in mime_type) or file_name.endswith('.xml')
+
+    def _is_tk_vat_file(file_name):
+        normalized = (file_name or '').upper().replace('_', '-').replace(' ', '')
+        return ('TK-VAT' in normalized) or ('TKVAT' in normalized)
 
     instruction = {"buy_val": 0, "sell_val": 0, "found_xml": False}
+    xml_candidates = []
     if f_q_thue:
-        res = service.files().list(q=f"'{f_q_thue['id']}' in parents and mimeType = 'application/xml'").execute()
-        for f in res.get('files', []):
-            if "TK-VAT" in f['name'].upper():
-                parsed = get_file_content_logic(service, f['id'])
-                if parsed.get('type') == 'xml_tax':
-                    d = parsed.get('data', {})
-                    instruction = {
-                        "buy_val": float(d.get('ct23', 0)),
-                        "sell_val": float(d.get('ct34', 0)),
-                        "found_xml": True
-                    }
-                break
+        quarter_files = get_all_files_recursive(service, f_q_thue['id'])
+        xml_candidates = [
+            f for f in quarter_files
+            if _is_xml_file(f)
+        ]
+    elif f_gtgt_root:
+        all_year_files = get_all_files_recursive(service, f_gtgt_root['id'])
+        xml_candidates = [
+            f for f in all_year_files
+            if _is_xml_file(f)
+        ]
+
+    prioritized_xml = [f for f in xml_candidates if _is_tk_vat_file(f.get('name'))]
+    fallback_xml = [f for f in xml_candidates if not _is_tk_vat_file(f.get('name'))]
+
+    for f in prioritized_xml + fallback_xml:
+        if _is_tk_vat_file(f.get('name')) or not prioritized_xml:
+            parsed = get_file_content_logic(service, f['id'])
+            if parsed.get('type') == 'xml_tax':
+                d = parsed.get('data', {})
+                instruction = {
+                    "buy_val": float(d.get('ct23', 0)),
+                    "sell_val": float(d.get('ct34', 0)),
+                    "found_xml": True
+                }
+            break
 
     # --- BƯỚC 2: LẤY FILE TỪ NHÁNH CÔNG TY DỰA TRÊN SỐ LIỆU ---
     f_cty = find_child_folder_by_name_contain(service, company_root_id, "TAI-LIEU-CONG-TY")

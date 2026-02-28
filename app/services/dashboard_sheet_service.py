@@ -238,7 +238,7 @@ class DashboardSheetService:
         rev_range = getattr(settings, 'DASH_REVENUE_RANGE', 'S:AD')
         debt24 = getattr(settings, 'DASH_DEBT_2024_RANGE', 'AF:AQ')
         debt25 = getattr(settings, 'DASH_DEBT_2025_RANGE', 'AR:BC')
-        debt26 = getattr(settings, 'DASH_DEBT_2026_RANGE', 'BD:BX')
+        debt26 = getattr(settings, 'DASH_DEBT_2026_RANGE', 'BD:BO')
         receivables = getattr(settings, 'DASH_RECEIVABLES_RANGE', 'BQ:CB')
         payment_2024_range = getattr(settings, 'DASH_PAYMENT_2024_RANGE', 'CD:CO')
         payment_2025_range = getattr(settings, 'DASH_PAYMENT_2025_RANGE', 'CP:DA')

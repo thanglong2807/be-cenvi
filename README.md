@@ -33,6 +33,35 @@ docker compose logs -f server
 docker compose down
 ```
 
+## Script deploy Docker nhanh
+
+### Máy dev (build + push Docker Hub)
+```powershell
+./scripts/docker_build_push.ps1
+```
+
+Tuỳ chọn tag:
+```powershell
+./scripts/docker_build_push.ps1 -Tag 2026.02.25.1
+```
+
+### Máy chủ Windows (pull + restart container)
+Chạy trong thư mục có `.env`:
+```bat
+scripts\docker_pull_run_windows.cmd
+```
+
+Hoặc chỉ định thư mục app:
+```bat
+scripts\docker_pull_run_windows.cmd D:\CODE\be-cenvi
+```
+
+### Máy chủ Linux (pull + restart container)
+```bash
+chmod +x scripts/docker_pull_run_linux.sh
+./scripts/docker_pull_run_linux.sh /opt/be-cenvi
+```
+
 ## Cấu hình MySQL làm DB
 
 Tạo file `.env` ở thư mục gốc dự án và khai báo 1 trong 2 cách:

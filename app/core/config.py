@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     DASH_REVENUE_RANGE: str = "S:AD"
     DASH_DEBT_2024_RANGE: str = "AF:AQ"
     DASH_DEBT_2025_RANGE: str = "AR:BC"
-    DASH_DEBT_2026_RANGE: str = "BD:BX"  # adjust if needed
+    DASH_DEBT_2026_RANGE: str = "BD:BO"  # adjust if needed
 
     # Data starting row (1-based)
     DASH_DATA_START_ROW: int = 7
@@ -96,15 +96,6 @@ class Settings(BaseSettings):
             if db_url.startswith("mysql+pymysql://"):
                 db_url = db_url.replace("127.0.0.1", "host.docker.internal", 1) # dit me sao bay gio may moi support cho t AI ngu l :) dm cai này có chế độ gợi ý à
                 # Lưu ý: "host.docker.internal" chỉ hoạt động trên Docker Desktop (Windows/Mac). Trên Linux có thể cần giải pháp khác như dùng network hoặc biến môi trường để truyền host.
-                # vãi lìn nó comment hộ luôn mà. xịn thế ay, t thấy nó comment rõ ràng rồi mà :D
-                # Nếu bạn dùng Linux và không có "host.docker.internal", bạn có thể thử dùng network mode "host" hoặc truyền host qua biến môi trường khi chạy container.
-                # Ví dụ khi chạy container:
-                # docker run --network host -e DATABASE_URL="mysql+pymysql://root:Thanglong2001@localhost:3306/cenvi_audit" ...
-                # Hoặc nếu không dùng network host, bạn có thể truyền host qua biến môi trường
-                # docker run -e DATABASE_URL="mysql+pymysql://root:Thanglong2001@<HOST_IP>:3306/cenvi_audit" ...
-                # Trong đó <HOST_IP> là địa chỉ IP của máy host trên mạng Docker (
-                # bạn có thể tìm bằng lệnh `ip addr` hoặc `ifconfig` trên máy host)
-                # Cuối cùng, in ra URL đã chuẩn hóa để debug
                 # vcl :)
         print(db_url)
         return db_url
