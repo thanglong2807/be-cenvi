@@ -369,7 +369,7 @@
                         </div>
                         <div class="metric-item">
                             <div class="metric-label">Thanh toán ${selectedYear}</div>
-                            <div class="metric-value">${selectedYear === '2026' ? '---' : formatCurrency(getYearSum(selectedEmployee.by_type.payments[selectedYear]))}</div>
+                            <div class="metric-value">${formatCurrency(getYearSum(selectedEmployee.by_type.payments[selectedYear]))}</div>
                         </div>
                         <div class="metric-item">
                             <div class="metric-label">Khách hàng ${selectedYear}</div>

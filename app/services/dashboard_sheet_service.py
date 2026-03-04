@@ -242,6 +242,7 @@ class DashboardSheetService:
         receivables = getattr(settings, 'DASH_RECEIVABLES_RANGE', 'BQ:CB')
         payment_2024_range = getattr(settings, 'DASH_PAYMENT_2024_RANGE', 'CD:CO')
         payment_2025_range = getattr(settings, 'DASH_PAYMENT_2025_RANGE', 'CP:DA')
+        payment_2026_range = getattr(settings, 'DASH_PAYMENT_2026_RANGE', 'DB:DM')
 
         for r in rows[idx_start:]:
             # ensure row has enough columns
@@ -256,6 +257,7 @@ class DashboardSheetService:
             receivables_all = self._slice_row_by_letters(r, *receivables.split(':'))  # 12 quarters (Q1-24 to Q4-26)
             payment_2024 = self._slice_row_by_letters(r, *payment_2024_range.split(':'))
             payment_2025 = self._slice_row_by_letters(r, *payment_2025_range.split(':'))
+            payment_2026 = self._slice_row_by_letters(r, *payment_2026_range.split(':'))
             
             # Split customers by year (4 quarters per year)
             customers_2024 = customers_quarterly[0:4] if len(customers_quarterly) >= 4 else []
@@ -296,7 +298,8 @@ class DashboardSheetService:
                     },
                     'payments': {
                         '2024': payment_2024,
-                        '2025': payment_2025
+                        '2025': payment_2025,
+                        '2026': payment_2026
                     },
                     'receivables': {
                         '2024': receivables_2024,

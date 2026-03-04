@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     
     # Sheet range: Format 'SheetName'!A1:Z100
     # Với sheet name có khoảng trắng/ký tự đặc biệt, dùng ngoặc kép
-    GOOGLE_SHEET_RANGE: str = "A1:DA200"
+    GOOGLE_SHEET_RANGE: str = "A1:DM200"
     GOOGLE_SHEET_NAME: str = "KẾ TOÁN THUẾ_KPI"  # Sheet thứ 12 (gid=514374063)
 
     # Mapping ranges (column letters only, without sheet name)
@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     DASH_DEBT_2024_RANGE: str = "AF:AQ"
     DASH_DEBT_2025_RANGE: str = "AR:BC"
     DASH_DEBT_2026_RANGE: str = "BD:BO"  # adjust if needed
+    DASH_PAYMENT_2024_RANGE: str = "CD:CO"
+    DASH_PAYMENT_2025_RANGE: str = "CP:DA"
+    DASH_PAYMENT_2026_RANGE: str = "DB:DM"
 
     # Data starting row (1-based)
     DASH_DATA_START_ROW: int = 7
