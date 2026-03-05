@@ -1,0 +1,17 @@
+{
+  "last_id": 3,
+  "items": [
+    {
+      "id": 1,
+      "folder_id": 1,
+      "email": "info@abc.vn",
+      "role": "viewer"
+    },
+    {
+      "id": 2,
+      "folder_id": 1,
+      "email": "ketoan@abc.vn",
+      "role": "editor"
+    }
+  ]
+}

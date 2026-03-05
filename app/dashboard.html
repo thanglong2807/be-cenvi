@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard KPI - Cenvi</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            color: white;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .status.connected {
+            background: rgba(76,175,80,0.5);
+        }
+        
+        .status.disconnected {
+            background: rgba(244,67,54,0.5);
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .controls button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .controls button:hover {
+            background: #764ba2;
+        }
+        
+        .employee-selector {
+            padding: 10px 15px;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .chart-card h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        .metrics-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .metrics-card h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .metric-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .summary-item h4 {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .summary-item p {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Dashboard KPI Cenvi</h1>
+            <div class="status" id="status">Connecting...</div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="fetchData()">🔄 Tải Dữ Liệu</button>
+            <button onclick="exportCSV()">📥 Xuất CSV</button>
+            <select class="employee-selector" id="employeeSelect" onchange="showEmployeeCharts()">
+                <option value="">-- Chọn Nhân Viên --</option>
+            </select>
+            <select class="employee-selector" id="yearSelect" onchange="showEmployeeCharts()">
+                <option value="2024">📅 2024</option>
+                <option value="2025">📅 2025</option>
+                <option value="2026">📅 2026</option>
+            </select>
+        </div>
+        
+        <div id="content">
+            <div class="loading">Đang tải dữ liệu từ server...</div>
+        </div>
+    </div>
+    
+    <script>
+        let allEmployees = [];
+        let selectedEmployee = null;
+        
+        // Kết nối WebSocket
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:8000/api/v1/dashboard/ws');
+            
+            ws.onopen = () => {
+                console.log('✅ WebSocket Connected');
+                updateStatus(true);
+                // Keep-alive ping
+                setInterval(() => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send('ping');
+                    }
+                }, 30000);
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'data_update' && data.parsed) {
+                        console.log(`📊 Received ${data.parsed.length} employees`);
+                        allEmployees = data.parsed;
+                        renderDashboard();
+                    }
+                } catch (e) {
+                    console.error('Error parsing WebSocket message:', e);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateStatus(false);
+                fetchData(); // Fallback to REST API
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket closed, reconnecting...');
+                updateStatus(false);
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+        
+        function updateStatus(connected) {
+            const statusEl = document.getElementById('status');
+            if (connected) {
+                statusEl.textContent = '🟢 Connected';
+                statusEl.className = 'status connected';
+            } else {
+                statusEl.textContent = '🔴 Disconnected';
+                statusEl.className = 'status disconnected';
+            }
+        }
+        
+        // Tải dữ liệu từ REST API
+        async function fetchData() {
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/dashboard/parsed');
+                const data = await response.json();
+                if (data.items) {
+                    console.log(`✅ Loaded ${data.count} employees`);
+                    allEmployees = data.items;
+                    renderDashboard();
+                }
+            } catch (e) {
+                console.error('Error fetching data:', e);
+                document.getElementById('content').innerHTML = `<div style="color:red; padding:20px;">❌ Lỗi tải dữ liệu: ${e.message}</div>`;
+            }
+        }
+        
+        function renderDashboard() {
+            if (selectedEmployee) {
+                showEmployeeCharts();
+            } else {
+                showOverview();
+            }
+            updateEmployeeSelector();
+        }
+        
+        function updateEmployeeSelector() {
+            const select = document.getElementById('employeeSelect');
+            select.innerHTML = '<option value="">-- Chọn Nhân Viên --</option>';
+            allEmployees.forEach((emp, idx) => {
+                const option = document.createElement('option');
+                option.value = idx;
+                option.textContent = `${emp.code} - ${emp.name}`;
+                select.appendChild(option);
+            });
+        }
+        
+        function showEmployeeCharts() {
+            const selectIdx = document.getElementById('employeeSelect').value;
+            if (!selectIdx) {
+                showOverview();
+                return;
+            }
+            
+            selectedEmployee = allEmployees[selectIdx];
+            const selectedYear = document.getElementById('yearSelect').value || '2024';
+            
+            // Status badge color
+            const statusColor = selectedEmployee.status === 'LIVE' ? '#4CAF50' : '#f44336';
+            const statusText = selectedEmployee.status === 'LIVE' ? '🟢 ACTIVE' : '🔴 INACTIVE';
+            
+            const html = `
+                <div class="metrics-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3>👤 ${selectedEmployee.code} - ${selectedEmployee.name}</h3>
+                            <p style="font-size: 12px; color: #666; margin-top: 5px;">Năm: <strong>${selectedYear}</strong></p>
+                        </div>
+                        <div style="background: ${statusColor}; color: white; padding: 12px 20px; border-radius: 8px; font-size: 16px; font-weight: bold;">
+                            ${statusText}
+                        </div>
+                    </div>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-label">Doanh thu ${selectedYear}</div>
+                            <div class="metric-value">${formatCurrency(getYearSum(selectedEmployee.by_type.revenue[selectedYear]))}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Thanh toán ${selectedYear}</div>
+                            <div class="metric-value">${selectedYear === '2026' ? '---' : formatCurrency(getYearSum(selectedEmployee.by_type.payments[selectedYear]))}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Khách hàng ${selectedYear}</div>
+                            <div class="metric-value">${selectedEmployee.by_type.customers[selectedYear].reduce((a,b) => a+b, 0)} khách</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Công nợ Q4-${selectedYear}</div>
+                            <div class="metric-value">${formatCurrency(selectedEmployee.by_type.receivables[selectedYear][3])}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <div class="chart-card">
+                        <h3>📈 Khách Hàng (Quý) ${selectedYear}</h3>
+                        <div class="chart-container">
+                            <canvas id="customersChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3>💰 Doanh Thu (Quý) ${selectedYear}</h3>
+                        <div class="chart-container">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    ${selectedYear !== '2026' ? `
+                    <div class="chart-card">
+                        <h3>💳 Thanh Toán (Tháng) ${selectedYear}</h3>
+                        <div class="chart-container">
+                            <canvas id="paymentChart"></canvas>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="chart-card">
+                        <h3>📊 Công Nợ Phải Thu (Quý) ${selectedYear}</h3>
+                        <div class="chart-container">
+                            <canvas id="receivablesChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3>📉 KPI Công Nợ ${selectedYear} (Tháng)</h3>
+                        <div class="chart-container">
+                            <canvas id="debtChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+            
+            // Vẽ charts
+            setTimeout(() => {
+                drawCustomersChart(selectedYear);
+                drawRevenueChart(selectedYear);
+                if (selectedYear !== '2026') {
+                    drawPaymentChart(selectedYear);
+                }
+                drawReceivablesChart(selectedYear);
+                drawDebtChart(selectedYear);
+            }, 100);
+        }
+        
+        function showOverview() {
+            const summary = calculateSummary();
+            
+            let employeeTableHtml = '';
+            allEmployees.forEach((emp, idx) => {
+                const rev2024 = emp.by_type.revenue['2024'].reduce((a,b) => a+b, 0);
+                const rev2025 = emp.by_type.revenue['2025'].reduce((a,b) => a+b, 0);
+                const pay2024 = emp.by_type.payments['2024'].reduce((a,b) => a+b, 0);
+                const cust2024 = emp.by_type.customers['2024'].reduce((a,b) => a+b, 0);
+                
+                employeeTableHtml += `
+                    <tr onclick="selectEmployee(${idx})">
+                        <td>${emp.code}</td>
+                        <td>${emp.name}</td>
+                        <td><span style="background: ${emp.status === 'LIVE' ? '#4CAF50' : '#f44336'}; color: white; padding: 4px 8px; border-radius: 4px;">${emp.status}</span></td>
+                        <td>${cust2024}</td>
+                        <td>${formatCurrency(rev2024)}</td>
+                        <td>${formatCurrency(rev2025)}</td>
+                        <td>${formatCurrency(pay2024)}</td>
+                    </tr>
+                `;
+            });
+            
+            const html = `
+                <div class="summary-card">
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <h4>Tổng Nhân Viên</h4>
+                            <p>${allEmployees.length}</p>
+                        </div>
+                        <div class="summary-item">
+                            <h4>Tổng Doanh Thu 2024</h4>
+                            <p>${formatCurrency(summary.totalRevenue2024)}</p>
+                        </div>
+                        <div class="summary-item">
+                            <h4>Tổng Doanh Thu 2025</h4>
+                            <p>${formatCurrency(summary.totalRevenue2025)}</p>
+                        </div>
+                        <div class="summary-item">
+                            <h4>Tổng Thanh Toán 2024</h4>
+                            <p>${formatCurrency(summary.totalPayment2024)}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <div class="chart-card">
+                        <h3>📈 Top 10 Doanh Thu 2024</h3>
+                        <div class="chart-container">
+                            <canvas id="topRevenueChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3>👥 Khách Hàng theo Nhân Viên 2024</h3>
+                        <div class="chart-container">
+                            <canvas id="customersPerEmpChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3>💰 Doanh Thu Hàng Quý 2024</h3>
+                        <div class="chart-container">
+                            <canvas id="monthlyRevenueChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3>💳 Thanh Toán Hàng Tháng 2024</h3>
+                        <div class="chart-container">
+                            <canvas id="monthlyPaymentChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <h3 style="padding: 20px 20px 0 20px; color: #333;">📋 Chi Tiết Nhân Viên</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mã</th>
+                                <th>Tên</th>
+                                <th>Trạng Thái</th>
+                                <th>Khách 2024</th>
+                                <th>Doanh Thu 2024</th>
+                                <th>Doanh Thu 2025</th>
+                                <th>Thanh Toán 2024</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${employeeTableHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+            
+            // Vẽ overview charts
+            setTimeout(() => {
+                drawTopRevenueChart();
+                drawCustomersPerEmpChart();
+                drawMonthlyRevenueChart();
+                drawMonthlyPaymentChart();
+            }, 100);
+        }
+        
+        function selectEmployee(idx) {
+            document.getElementById('employeeSelect').value = idx;
+            showEmployeeCharts();
+        }
+        
+        function calculateSummary() {
+            let totalRevenue2024 = 0, totalRevenue2025 = 0, totalPayment2024 = 0;
+            
+            allEmployees.forEach(emp => {
+                totalRevenue2024 += emp.by_type.revenue['2024'].reduce((a,b) => a+b, 0);
+                totalRevenue2025 += emp.by_type.revenue['2025'].reduce((a,b) => a+b, 0);
+                totalPayment2024 += emp.by_type.payments['2024'].reduce((a,b) => a+b, 0);
+            });
+            
+            return { totalRevenue2024, totalRevenue2025, totalPayment2024 };
+        }
+        
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND',
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+        
+        function getYearSum(arr) {
+            return arr.reduce((a, b) => a + b, 0);
+        }
+        
+        // ==================== EMPLOYEE CHARTS ====================
+        
+        function drawCustomersChart(year) {
+            const ctx = document.getElementById('customersChart');
+            if (!ctx) return;
+            new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+                    datasets: [
+                        { label: year, data: selectedEmployee.by_type.customers[year], backgroundColor: '#667eea' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            });
+        }
+        
+        function drawRevenueChart(year) {
+            const ctx = document.getElementById('revenueChart');
+            if (!ctx) return;
+            new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+                    datasets: [
+                        { label: year, data: selectedEmployee.by_type.revenue[year], borderColor: '#667eea', backgroundColor: 'rgba(102, 126, 234, 0.1)', tension: 0.3 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            });
+        }
+        
+        function drawPaymentChart(year) {
+            const ctx = document.getElementById('paymentChart');
+            if (!ctx) return;
+            new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'],
+                    datasets: [
+                        { label: year, data: selectedEmployee.by_type.payments[year] || [], backgroundColor: '#4CAF50' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            });
+        }
+        
+        function drawReceivablesChart(year) {
+            const ctx = document.getElementById('receivablesChart');
+            if (!ctx) return;
+            new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+                    datasets: [
+                        { label: year, data: selectedEmployee.by_type.receivables[year], borderColor: '#FF9800', backgroundColor: 'rgba(255, 152, 0, 0.1)', tension: 0.3 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            });
+        }
+        
+        function drawDebtChart(year) {
+            const ctx = document.getElementById('debtChart');
+            if (!ctx) return;
+            const debtValues = selectedEmployee.by_type.debt[year].map(d => {
+                return parseInt(d.toString().replace('%', ''));
+            });
+            
+            new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'],
+                    datasets: [{ label: 'Nợ %', data: debtValues, borderColor: '#f44336', backgroundColor: 'rgba(244, 67, 54, 0.1)', tension: 0.3, fill: true }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { max: 100 } }, plugins: { legend: { position: 'top' } } }
+            });
+        }
+        
+        // ==================== OVERVIEW CHARTS ====================
+        
+        function drawTopRevenueChart() {
+            const top10 = allEmployees
+                .map(emp => ({
+                    name: emp.code,
+                    value: emp.by_type.revenue['2024'].reduce((a,b) => a+b, 0)
+                }))
+                .sort((a, b) => b.value - a.value)
+                .slice(0, 10);
+            
+            const ctx = document.getElementById('topRevenueChart');
+            if (!ctx) return;
+            new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: top10.map(x => x.name),
+                    datasets: [{ label: 'Doanh Thu 2024', data: top10.map(x => x.value), backgroundColor: '#667eea' }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            });
+        }
+        
+        function drawCustomersPerEmpChart() {
+            const data = allEmployees
+                .map(emp => ({
+                    name: emp.code,
+                    value: emp.by_type.customers['2024'].reduce((a,b) => a+b, 0)
+                }))
+                .sort((a, b) => b.value - a.value);
+            
+            const ctx = document.getElementById('customersPerEmpChart');
+            if (!ctx) return;
+            new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: data.map(x => x.name),
+                    datasets: [{ label: 'Khách Hàng 2024', data: data.map(x => x.value), backgroundColor: '#4CAF50' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            });
+        }
+        
+        function drawMonthlyRevenueChart() {
+            const monthlyData = [0, 0, 0, 0];
+            allEmployees.forEach(emp => {
+                emp.by_type.revenue['2024'].forEach((val, idx) => {
+                    monthlyData[idx] += val;
+                });
+            });
+            
+            const ctx = document.getElementById('monthlyRevenueChart');
+            if (!ctx) return;
+            new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+                    datasets: [{ label: 'Doanh Thu Toàn Công Ty 2024', data: monthlyData, borderColor: '#667eea', backgroundColor: 'rgba(102, 126, 234, 0.1)', tension: 0.3, fill: true }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            });
+        }
+        
+        function drawMonthlyPaymentChart() {
+            const monthlyData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+            allEmployees.forEach(emp => {
+                emp.by_type.payments['2024'].forEach((val, idx) => {
+                    monthlyData[idx] += val;
+                });
+            });
+            
+            const ctx = document.getElementById('monthlyPaymentChart');
+            if (!ctx) return;
+            new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'],
+                    datasets: [{ label: 'Thanh Toán Toàn Công Ty 2024', data: monthlyData, backgroundColor: '#4CAF50' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            });
+        }
+        
+        function exportCSV() {
+            let csv = 'Mã,Tên,Trạng Thái,Khách 2024,Doanh Thu 2024,Doanh Thu 2025,Thanh Toán 2024\n';
+            allEmployees.forEach(emp => {
+                const cust = emp.by_type.customers['2024'].reduce((a,b) => a+b, 0);
+                const rev24 = emp.by_type.revenue['2024'].reduce((a,b) => a+b, 0);
+                const rev25 = emp.by_type.revenue['2025'].reduce((a,b) => a+b, 0);
+                const pay24 = emp.by_type.payments['2024'].reduce((a,b) => a+b, 0);
+                csv += `${emp.code},${emp.name},${emp.status},${cust},${rev24},${rev25},${pay24}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dashboard-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+        
+        // Khởi động
+        connectWebSocket();
+        setTimeout(fetchData, 2000); // Fallback nếu WebSocket chậm
+    </script>
+</body>
+</html>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+            transition: background 0.3s;
+        }
+
+        .status-indicator.connected {
+            background: #4caf50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+
+        .status-indicator.disconnected {
+            background: #f44336;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+
+        .content {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .content h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        #messages {
+            height: 300px;
+            overflow-y: auto;
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            border: 1px solid #ddd;
+        }
+
+        .message {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+
+        .message.update {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+            color: #2e7d32;
+        }
+
+        .message.info {
+            background: #e3f2fd;
+            border-left-color: #2196f3;
+            color: #1565c0;
+        }
+
+        .message.error {
+            background: #ffebee;
+            border-left-color: #f44336;
+            color: #c62828;
+        }
+
+        #dataTable {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        #dataTable thead {
+            background: #667eea;
+            color: white;
+        }
+
+        #dataTable th,
+        #dataTable td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #dataTable tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .no-data {
+            color: #999;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        #employeeTable {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            display: none;
+        }
+
+        #employeeTable thead {
+            background: #667eea;
+            color: white;
+        }
+
+        #employeeTable th,
+        #employeeTable td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #employeeTable tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .expand-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .expand-btn:hover {
+            background: #764ba2;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .status-badge.LIVE {
+            background: #4caf50;
+            color: white;
+        }
+
+        .status-badge.INACTIVE {
+            background: #f44336;
+            color: white;
+        }
+
+        .details-row {
+            display: none;
+        }
+
+        .details-row.open {
+            display: table-row;
+        }
+
+        .details-content {
+            padding: 15px;
+            background: #f9f9f9;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .detail-item {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .detail-label {
+            color: #666;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .detail-values {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .value-badge {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .attachment-card {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+        }
+
+        .attachment-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .attachment-input {
+            flex: 1 1 240px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .attachment-input label {
+            font-size: 12px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .attachment-link-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .attachment-link-row input {
+            flex: 1 1 auto;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .attachment-preview {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .attachment-preview a {
+            color: #1565c0;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .attachment-preview .empty {
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Cenvi Dashboard - Real-time Updates</h1>
+            <div class="status">
+                <div class="status-item">
+                    <div class="status-indicator" id="statusIndicator"></div>
+                    <span id="statusText">Disconnected</span>
+                </div>
+                <div class="status-item">
+                    Connected Clients: <strong id="clientCount">0</strong>
+                </div>
+            </div>
+            <div class="controls">
+                <button class="btn-primary" id="connectBtn">Connect</button>
+                <button class="btn-danger" id="disconnectBtn">Disconnect</button>
+                <button class="btn-primary" id="fetchBtn">Fetch Data (REST)</button>
+                <button class="btn-primary" id="fetchParsedBtn">Fetch Parsed JSON</button>
+                <button class="btn-primary" id="clearBtn">Clear Messages</button>
+            </div>
+        </header>
+
+        <div class="attachment-card">
+            <h2>📎 Tài liệu / Link</h2>
+            <div class="attachment-grid">
+                <div class="attachment-input">
+                    <label for="attachmentFile">Upload file</label>
+                    <input type="file" id="attachmentFile" />
+                </div>
+                <div class="attachment-input">
+                    <label for="attachmentLink">Dán link</label>
+                    <div class="attachment-link-row">
+                        <input type="url" id="attachmentLink" placeholder="https://..." />
+                        <button class="btn-primary" id="saveLinkBtn">Lưu link</button>
+                    </div>
+                </div>
+                <div class="attachment-input" style="flex: 0 0 auto;">
+                    <button class="btn-danger" id="clearAttachmentBtn">Xóa</button>
+                </div>
+            </div>
+            <div class="attachment-preview" id="attachmentPreview">
+                <span class="empty">Chưa có file hoặc link để hiển thị.</span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Rows</div>
+                <div class="stat-value" id="rowCount">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Columns</div>
+                <div class="stat-value" id="colCount">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Last Updated</div>
+                <div class="stat-value" id="lastUpdate" style="font-size: 14px;">-</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <h2>📨 Real-time Messages</h2>
+            <div id="messages"></div>
+        </div>
+
+        <div class="content">
+            <h2>📋 Data Table</h2>
+            <table id="dataTable">
+                <thead>
+                    <tr id="headerRow"></tr>
+                </thead>
+                <tbody id="dataBody"></tbody>
+            </table>
+            <table id="employeeTable">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;"></th>
+                        <th>Mã NV</th>
+                        <th>Tên</th>
+                        <th>Trạng thái</th>
+                        <th style="width: 150px;">Tài khoản khách</th>
+                        <th style="width: 150px;">Doanh thu KPI</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeBody"></tbody>
+            </table>
+            <div id="noData" class="no-data">No data yet. Connect to WebSocket first.</div>
+            <pre id="jsonView" style="display:none; background:#1e1e1e; color:#dcdcdc; padding:16px; border-radius:6px; overflow:auto; max-height:400px; font-family:Consolas, 'Courier New', monospace;"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = `ws://${window.location.hostname}:${window.location.port}/api/v1/dashboard/ws`;
+        const REST_URL = `http://${window.location.hostname}:${window.location.port}/api/v1/dashboard/data`;
+        const PARSED_URL = `http://${window.location.hostname}:${window.location.port}/api/v1/dashboard/parsed`;
+
+        let ws = null;
+        let currentData = null;
+
+        const elements = {
+            statusIndicator: document.getElementById('statusIndicator'),
+            statusText: document.getElementById('statusText'),
+            messages: document.getElementById('messages'),
+            connectBtn: document.getElementById('connectBtn'),
+            disconnectBtn: document.getElementById('disconnectBtn'),
+            fetchBtn: document.getElementById('fetchBtn'),
+            fetchParsedBtn: document.getElementById('fetchParsedBtn'),
+            clearBtn: document.getElementById('clearBtn'),
+            dataTable: document.getElementById('dataTable'),
+            noData: document.getElementById('noData'),
+            headerRow: document.getElementById('headerRow'),
+            dataBody: document.getElementById('dataBody'),
+            rowCount: document.getElementById('rowCount'),
+            colCount: document.getElementById('colCount'),
+            lastUpdate: document.getElementById('lastUpdate'),
+            clientCount: document.getElementById('clientCount'),
+            jsonView: document.getElementById('jsonView'),
+            employeeTable: document.getElementById('employeeTable'),
+            employeeBody: document.getElementById('employeeBody')
+        };
+
+        const attachmentElements = {
+            fileInput: document.getElementById('attachmentFile'),
+            linkInput: document.getElementById('attachmentLink'),
+            saveLinkBtn: document.getElementById('saveLinkBtn'),
+            clearBtn: document.getElementById('clearAttachmentBtn'),
+            preview: document.getElementById('attachmentPreview')
+        };
+
+        const ATTACHMENT_LINK_KEY = 'dashboard_attachment_link';
+
+        const attachmentState = {
+            file: null,
+            fileUrl: null,
+            link: ''
+        };
+
+        function normalizeLink(value) {
+            if (!value) return '';
+            if (/^https?:\/\//i.test(value)) return value;
+            return `https://${value}`;
+        }
+
+        function clearFileAttachment() {
+            if (attachmentState.fileUrl) {
+                URL.revokeObjectURL(attachmentState.fileUrl);
+            }
+            attachmentState.file = null;
+            attachmentState.fileUrl = null;
+            attachmentElements.fileInput.value = '';
+        }
+
+        function renderAttachmentPreview() {
+            const parts = [];
+
+            if (attachmentState.file && attachmentState.fileUrl) {
+                parts.push(
+                    `📁 File: <a href="${attachmentState.fileUrl}" target="_blank" rel="noopener">${attachmentState.file.name}</a>`
+                );
+            }
+
+            if (attachmentState.link) {
+                parts.push(
+                    `🔗 Link: <a href="${attachmentState.link}" target="_blank" rel="noopener">${attachmentState.link}</a>`
+                );
+            }
+
+            if (parts.length === 0) {
+                attachmentElements.preview.innerHTML = '<span class="empty">Chưa có file hoặc link để hiển thị.</span>';
+                return;
+            }
+
+            attachmentElements.preview.innerHTML = parts.join('<br>');
+        }
+
+        function loadSavedLink() {
+            const saved = localStorage.getItem(ATTACHMENT_LINK_KEY);
+            if (saved) {
+                attachmentState.link = saved;
+                attachmentElements.linkInput.value = saved;
+            }
+            renderAttachmentPreview();
+        }
+
+        function updateStatus(connected) {
+            if (connected) {
+                elements.statusIndicator.classList.add('connected');
+                elements.statusIndicator.classList.remove('disconnected');
+                elements.statusText.textContent = 'Connected';
+                elements.connectBtn.disabled = true;
+                elements.disconnectBtn.disabled = false;
+            } else {
+                elements.statusIndicator.classList.remove('connected');
+                elements.statusIndicator.classList.add('disconnected');
+                elements.statusText.textContent = 'Disconnected';
+                elements.connectBtn.disabled = false;
+                elements.disconnectBtn.disabled = true;
+            }
+        }
+
+        function addMessage(text, type = 'info') {
+            const msg = document.createElement('div');
+            msg.className = `message ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            msg.textContent = `[${timestamp}] ${text}`;
+            elements.messages.appendChild(msg);
+            elements.messages.scrollTop = elements.messages.scrollHeight;
+        }
+
+        function renderTable(data) {
+            if (!data || !data.data || data.data.length === 0) {
+                elements.noData.style.display = 'block';
+                elements.dataTable.style.display = 'none';
+                return;
+            }
+
+            elements.noData.style.display = 'none';
+            elements.dataTable.style.display = 'table';
+
+            // Headers
+            const headers = data.data[0] || [];
+            elements.headerRow.innerHTML = '';
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header || 'N/A';
+                elements.headerRow.appendChild(th);
+            });
+
+            // Data rows (first 20)
+            elements.dataBody.innerHTML = '';
+            const rows = data.data.slice(1, 21);
+            rows.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, i) => {
+                    const td = document.createElement('td');
+                    td.textContent = cell !== null && cell !== undefined ? cell : '-';
+                    tr.appendChild(td);
+                });
+                elements.dataBody.appendChild(tr);
+            });
+
+            // Update stats
+            elements.rowCount.textContent = data.rows_count || '-';
+            elements.colCount.textContent = data.cols_count || '-';
+            elements.lastUpdate.textContent = new Date(data.timestamp).toLocaleTimeString();
+        }
+
+        function connectWebSocket() {
+            if (ws) return;
+
+            ws = new WebSocket(API_URL);
+
+            ws.onopen = () => {
+                updateStatus(true);
+                addMessage('✅ Connected to Dashboard WebSocket', 'update');
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'data_update') {
+                        addMessage(`📊 Data Update - ${data.rows_count} rows, ${data.cols_count} cols`, 'update');
+                        currentData = data;
+                        renderTable(data);
+                        // If parsed items included, auto-render employee table
+                        if (data.parsed && Array.isArray(data.parsed)) {
+                            addMessage(`🔁 Parsed data received - ${data.parsed.length} employees`, 'info');
+                            elements.dataTable.style.display = 'none';
+                            elements.noData.style.display = 'none';
+                            elements.jsonView.style.display = 'none';
+                            elements.employeeTable.style.display = 'table';
+                            renderEmployeeTable(data.parsed);
+                        }
+                    } else if (data.type === 'pong') {
+                        addMessage('💓 Pong received', 'info');
+                    }
+                } catch (e) {
+                    addMessage(`Error parsing message: ${e.message}`, 'error');
+                }
+            };
+
+            ws.onerror = (error) => {
+                addMessage(`❌ WebSocket Error: ${error}`, 'error');
+            };
+
+            ws.onclose = () => {
+                updateStatus(false);
+                addMessage('❌ Disconnected from Dashboard', 'error');
+                ws = null;
+            };
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        async function fetchDataREST() {
+            try {
+                addMessage('⏳ Fetching data via REST...', 'info');
+                const response = await fetch(REST_URL);
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage(`❌ ${data.error}`, 'error');
+                } else {
+                    addMessage(`✅ REST data fetched - ${data.rows_count} rows`, 'update');
+                    currentData = data;
+                    renderTable(data);
+                }
+            } catch (e) {
+                addMessage(`❌ Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function fetchParsedJSON() {
+            try {
+                addMessage('⏳ Fetching parsed JSON...', 'info');
+                const res = await fetch(PARSED_URL);
+                const payload = await res.json();
+
+                if (payload && payload.error) {
+                    addMessage(`❌ ${payload.error}`, 'error');
+                    return;
+                }
+
+                // Handle both direct array and wrapped response
+                const employees = Array.isArray(payload) ? payload : payload.items || [];
+                const count = employees.length;
+                
+                addMessage(`✅ Parsed JSON fetched - ${count} items`, 'update');
+                // Hide table and show employee table
+                elements.dataTable.style.display = 'none';
+                elements.noData.style.display = 'none';
+                elements.jsonView.style.display = 'none';
+                elements.employeeTable.style.display = 'table';
+                
+                renderEmployeeTable(employees);
+            } catch (e) {
+                addMessage(`❌ Error fetching parsed JSON: ${e.message}`, 'error');
+            }
+        }
+
+        function renderEmployeeTable(employees) {
+            if (!Array.isArray(employees) || employees.length === 0) {
+                elements.noData.style.display = 'block';
+                elements.employeeTable.style.display = 'none';
+                return;
+            }
+
+            elements.employeeBody.innerHTML = '';
+            
+            employees.forEach((emp, idx) => {
+                // Main row
+                const tr = document.createElement('tr');
+                tr.className = 'employee-row';
+                
+                const expandBtn = document.createElement('button');
+                expandBtn.className = 'expand-btn';
+                expandBtn.textContent = '▼';
+                expandBtn.onclick = () => toggleDetails(idx);
+
+                const tdExpand = document.createElement('td');
+                tdExpand.appendChild(expandBtn);
+                tr.appendChild(tdExpand);
+
+                const tdCode = document.createElement('td');
+                tdCode.textContent = emp.code || '-';
+                tdCode.style.fontWeight = 'bold';
+                tr.appendChild(tdCode);
+
+                const tdName = document.createElement('td');
+                tdName.textContent = emp.name || '-';
+                tr.appendChild(tdName);
+
+                const tdStatus = document.createElement('td');
+                const statusBadge = document.createElement('span');
+                statusBadge.className = `status-badge ${emp.status || 'INACTIVE'}`;
+                statusBadge.textContent = emp.status || '-';
+                tdStatus.appendChild(statusBadge);
+                tr.appendChild(tdStatus);
+
+                const tdCustomers = document.createElement('td');
+                if (emp.customers && Array.isArray(emp.customers)) {
+                    tdCustomers.innerHTML = emp.customers.map((c, i) => `<span class="value-badge">${i+1}: ${c}</span>`).join('');
+                } else {
+                    tdCustomers.textContent = '-';
+                }
+                tr.appendChild(tdCustomers);
+
+                const tdRevenue = document.createElement('td');
+                if (emp.revenue_kpi && Array.isArray(emp.revenue_kpi)) {
+                    tdRevenue.innerHTML = emp.revenue_kpi.map((r, i) => `<span class="value-badge">${i+1}: ${r}</span>`).join('');
+                } else {
+                    tdRevenue.textContent = '-';
+                }
+                tr.appendChild(tdRevenue);
+
+                elements.employeeBody.appendChild(tr);
+
+                // Details row
+                const detailsRow = document.createElement('tr');
+                detailsRow.className = `details-row`;
+                detailsRow.id = `details-${idx}`;
+                detailsRow.style.display = 'none';
+
+                const detailsCell = document.createElement('td');
+                detailsCell.colSpan = '6';
+                detailsCell.innerHTML = `
+                    <div class="details-content">
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">📊 Công nợ KPI 2024</div>
+                                <div class="detail-values">
+                                    ${emp.debt_kpi_2024 && Array.isArray(emp.debt_kpi_2024) 
+                                        ? emp.debt_kpi_2024.map((d, i) => `<span class="value-badge">${i+1}: ${d}</span>`).join('')
+                                        : '<span style="color:#999;">Không có dữ liệu</span>'
+                                    }
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">📊 Công nợ KPI 2025</div>
+                                <div class="detail-values">
+                                    ${emp.debt_kpi_2025 && Array.isArray(emp.debt_kpi_2025)
+                                        ? emp.debt_kpi_2025.map((d, i) => `<span class="value-badge">${i+1}: ${d}</span>`).join('')
+                                        : '<span style="color:#999;">Không có dữ liệu</span>'
+                                    }
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">📊 Công nợ KPI 2026</div>
+                                <div class="detail-values">
+                                    ${emp.debt_kpi_2026 && Array.isArray(emp.debt_kpi_2026)
+                                        ? emp.debt_kpi_2026.map((d, i) => d ? `<span class="value-badge">${i+1}: ${d}</span>` : '').join('')
+                                        : '<span style="color:#999;">Không có dữ liệu</span>'
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <pre style="margin-top:10px; background:#fff; padding:10px; border-radius:4px; font-size:11px; border:1px solid #ddd;">${JSON.stringify(emp, null, 2)}</pre>
+                    </div>
+                `;
+                detailsRow.appendChild(detailsCell);
+                elements.employeeBody.appendChild(detailsRow);
+            });
+        }
+
+        function toggleDetails(idx) {
+            const detailsRow = document.getElementById(`details-${idx}`);
+            if (detailsRow) {
+                detailsRow.style.display = detailsRow.style.display === 'none' ? 'table-row' : 'none';
+            }
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            clearFileAttachment();
+            if (!file) {
+                renderAttachmentPreview();
+                return;
+            }
+            attachmentState.file = file;
+            attachmentState.fileUrl = URL.createObjectURL(file);
+            renderAttachmentPreview();
+        }
+
+        function handleSaveLink() {
+            const rawLink = attachmentElements.linkInput.value.trim();
+            if (!rawLink) {
+                attachmentState.link = '';
+                localStorage.removeItem(ATTACHMENT_LINK_KEY);
+                renderAttachmentPreview();
+                return;
+            }
+            const normalized = normalizeLink(rawLink);
+            attachmentState.link = normalized;
+            attachmentElements.linkInput.value = normalized;
+            localStorage.setItem(ATTACHMENT_LINK_KEY, normalized);
+            renderAttachmentPreview();
+        }
+
+        function clearAttachmentAll() {
+            clearFileAttachment();
+            attachmentState.link = '';
+            attachmentElements.linkInput.value = '';
+            localStorage.removeItem(ATTACHMENT_LINK_KEY);
+            renderAttachmentPreview();
+        }
+
+        // Event listeners
+        elements.connectBtn.addEventListener('click', connectWebSocket);
+        elements.disconnectBtn.addEventListener('click', disconnectWebSocket);
+        elements.fetchBtn.addEventListener('click', fetchDataREST);
+        elements.fetchParsedBtn.addEventListener('click', fetchParsedJSON);
+        elements.clearBtn.addEventListener('click', () => {
+            elements.messages.innerHTML = '';
+            addMessage('🧹 Messages cleared', 'info');
+        });
+
+        attachmentElements.fileInput.addEventListener('change', handleFileUpload);
+        attachmentElements.saveLinkBtn.addEventListener('click', handleSaveLink);
+        attachmentElements.clearBtn.addEventListener('click', clearAttachmentAll);
+
+        // Initialize
+        updateStatus(false);
+        elements.disconnectBtn.disabled = true;
+        addMessage('Ready to connect. Click "Connect" button.', 'info');
+        loadSavedLink();
+
+        // Keep-alive ping
+        setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('ping');
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
