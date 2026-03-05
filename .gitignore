@@ -49,3 +49,20 @@ Desktop.ini
 *.log
 *.sqlite
 logs/
+
+# ==================================
+# 7. LARGE FILES & BUILD ARTIFACTS
+# ==================================
+*.tar
+*.zip
+*.rar
+dist/
+backups/
+be-cenvi-server.*
+
+# ==================================
+# 8. TEST & DEBUG FILES
+# ==================================
+test_*.py
+debug_*.py
+temp_*.py
