@@ -1,5 +1,5 @@
 {
-  "last_id": 264,
+  "last_id": 271,
   "items": [
     {
       "company_code": "2025KH51",
@@ -3354,6 +3354,97 @@
       "updated_at": "2026-03-04T02:30:06.346218",
       "id": 264,
       "root_folder_id": "1wE1J43A3yIgefRSsMx2OCJiwPFyPvywT"
+    },
+    {
+      "company_code": "2026KH23",
+      "company_name": "TUAN-TANG",
+      "mst": "4601654043",
+      "year": 2026,
+      "template": "STANDARD",
+      "manager_employee_id": 12,
+      "status": "active",
+      "created_at": "2026-03-10T02:15:57.703471",
+      "updated_at": "2026-03-10T02:17:02.223311",
+      "id": 265,
+      "root_folder_id": "1XxSBr5I7F-qfFomKOBTzXnBHpSvwJq81"
+    },
+    {
+      "company_code": "2026KH24",
+      "company_name": "WAM-INSTITUTE",
+      "mst": "0319025344",
+      "year": 2026,
+      "template": "STANDARD",
+      "manager_employee_id": 13,
+      "status": "active",
+      "created_at": "2026-03-10T02:17:50.007638",
+      "updated_at": "2026-03-10T02:18:49.563559",
+      "id": 266,
+      "root_folder_id": "1bm0akdYHfTG-Mv0007PaeoUnvAzsgKgi"
+    },
+    {
+      "company_code": "2026KH25",
+      "company_name": "NGUYEN-HA",
+      "mst": "0111380300",
+      "year": 2026,
+      "template": "STANDARD",
+      "manager_employee_id": 5,
+      "status": "active",
+      "created_at": "2026-03-10T02:20:32.052839",
+      "updated_at": "2026-03-10T02:21:28.821377",
+      "id": 267,
+      "root_folder_id": "1evEc-IzQfEvT_HuLzPdNk3Ewws1IqAym"
+    },
+    {
+      "company_code": "2026KH26",
+      "company_name": "XAY-DUNG-VA-THUONG-MAI-T-N",
+      "mst": "0111381135",
+      "year": 2026,
+      "template": "STANDARD",
+      "manager_employee_id": 5,
+      "status": "active",
+      "created_at": "2026-03-10T02:23:56.630606",
+      "updated_at": "2026-03-10T02:24:52.344929",
+      "id": 268,
+      "root_folder_id": "1jCl9hjXhnrmG49ntEPSpd6FsLkz_CAgF"
+    },
+    {
+      "company_code": "2026KH27",
+      "company_name": "TMDV-HUNG-LONG",
+      "mst": "0319337921",
+      "year": 2026,
+      "template": "STANDARD",
+      "manager_employee_id": 13,
+      "status": "active",
+      "created_at": "2026-03-10T02:28:10.483148",
+      "updated_at": "2026-03-10T02:29:05.439111",
+      "id": 269,
+      "root_folder_id": "10iTCZTjMrdtxKP5_agIYP9mDzeUCAz7U"
+    },
+    {
+      "company_code": "2026KH28",
+      "company_name": "DUC-ĐAT-AQUA",
+      "mst": "0111398499",
+      "year": 2026,
+      "template": "STANDARD",
+      "manager_employee_id": 12,
+      "status": "active",
+      "created_at": "2026-03-10T02:30:20.964804",
+      "updated_at": "2026-03-10T02:31:16.083453",
+      "id": 270,
+      "root_folder_id": "1nqnPsm30wnTecS15ZxaW3Z1cQL09bLcK"
+    },
+    {
+      "company_code": "2026KH29",
+      "company_name": "KHOAN-GIENG-KIEN-CUONG",
+      "mst": "4900940613",
+      "year": 2026,
+      "template": "STANDARD",
+      "manager_employee_id": 11,
+      "status": "active",
+      "created_at": "2026-03-10T02:32:31.834933",
+      "updated_at": "2026-03-10T02:33:25.777662",
+      "id": 271,
+      "root_folder_id": "1jTrNDg6OI5avdB-_DsOHe_zsTWB6vaaA"
     }
   ]
 }

@@ -19,27 +19,45 @@ def get_gtgt_audit_data(service, company_root_id, year, period, company_code):
     print(f"--- 🔍 BẮT ĐẦU ĐỐI SOÁT GTGT: {company_code} | {period}/{year} ---")
 
     try:
+        def _find_first_by_keywords(parent_id, keywords):
+            if not parent_id:
+                return None
+            for keyword in keywords:
+                found = find_child_folder_by_name_contain(service, parent_id, keyword)
+                if found:
+                    return found
+            return None
+
+        def _find_quarter_folder(parent_id, q):
+            candidates = [
+                f"QUY {q}", f"QUY-{q}", f"QUY_{q}", f"Q{q}",
+                f"QUÝ {q}", f"QUY{q}", f"QUÝ{q}",
+                f"HDM_QUY-{q}", f"HDM QUY {q}", f"HDM_Q{q}",
+                f"HDB_QUY-{q}", f"HDB QUY {q}", f"HDB_Q{q}"
+            ]
+            return _find_first_by_keywords(parent_id, candidates)
+
         # --- BƯỚC 1: TÌM ĐƯỜNG DẪN ĐẾN FOLDER QUÝ ---
         # Tìm nhánh THUẾ
-        f_thue = find_child_folder_by_name_contain(service, company_root_id, "THUE")
+        f_thue = _find_first_by_keywords(company_root_id, ["TAI-LIEU-THUE", "THUE"])
         if not f_thue:
             return {"status": "error", "message": "Không tìm thấy folder TAI-LIEU-THUE"}
 
         # Tìm folder Năm (VD: 2024)
         f_year = find_child_folder_exact(service, f_thue['id'], str(year))
         if not f_year:
-            return {"status": "error", "message": f"Không tìm thấy folder năm {year}"}
+            f_year = find_child_folder_by_name_contain(service, f_thue['id'], str(year))
 
-        # Tìm folder GIA-TRI-GIA-TANG
-        f_gtgt_root = find_child_folder_by_name_contain(service, f_year['id'], "GIA-TRI-GIA-TANG")
+        # Tìm folder GIA-TRI-GIA-TANG, ưu tiên theo nhánh năm; nếu thiếu thì fallback thẳng dưới THUẾ.
+        f_gtgt_root = find_child_folder_by_name_contain(service, f_year['id'], "GIA-TRI-GIA-TANG") if f_year else None
+        if not f_gtgt_root:
+            f_gtgt_root = find_child_folder_by_name_contain(service, f_thue['id'], "GIA-TRI-GIA-TANG")
         if not f_gtgt_root:
             return {"status": "error", "message": "Không tìm thấy folder GIA-TRI-GIA-TANG"}
 
         # Tìm đích danh folder QUÝ (Hỗ trợ cả QUY 1 và QUÝ 1)
         q_num = period.replace("Q", "")
-        f_quarter = find_child_folder_by_name_contain(service, f_gtgt_root['id'], f"QUY {q_num}")
-        if not f_quarter:
-            f_quarter = find_child_folder_by_name_contain(service, f_gtgt_root['id'], f"QUÝ {q_num}")
+        f_quarter = _find_quarter_folder(f_gtgt_root['id'], q_num)
 
         # --- BƯỚC 2: QUÉT ĐỆ QUY LẤY TOÀN BỘ FILE ---
         # Ưu tiên quét folder Quý; nếu không có file thì fallback quét toàn bộ GIA-TRI-GIA-TANG

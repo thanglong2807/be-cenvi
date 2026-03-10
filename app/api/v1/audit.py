@@ -5,6 +5,11 @@ from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel
 from typing import Optional, List
 import traceback
+import time
+import threading
+import copy
+import os
+from collections import OrderedDict
 
 # --- Cấu hình Database & Repositories ---
 from app.core.database import get_db
@@ -32,6 +37,58 @@ router = APIRouter(prefix="/audit", tags=["Audit"])
 
 folder_repo = FolderRepository()
 employee_repo = EmployeeRepository()
+
+HDON_ALL_FILES_CACHE_ENABLED = os.getenv("HDON_ALL_FILES_CACHE_ENABLED", "0") == "1"
+HDON_ALL_FILES_CACHE_TTL_SECONDS = int(os.getenv("HDON_ALL_FILES_CACHE_TTL_SECONDS", "90"))
+HDON_ALL_FILES_CACHE_MAX_KEYS = int(os.getenv("HDON_ALL_FILES_CACHE_MAX_KEYS", "50"))
+HDON_ALL_FILES_CACHE_MAX_ITEMS = int(os.getenv("HDON_ALL_FILES_CACHE_MAX_ITEMS", "300"))
+_hdon_all_files_cache = OrderedDict()
+_hdon_all_files_cache_lock = threading.Lock()
+
+
+def _get_hdon_all_files_cache(cache_key):
+    if not HDON_ALL_FILES_CACHE_ENABLED:
+        return None
+
+    now = time.time()
+    with _hdon_all_files_cache_lock:
+        item = _hdon_all_files_cache.get(cache_key)
+        if not item:
+            return None
+        if item["expire_at"] <= now:
+            _hdon_all_files_cache.pop(cache_key, None)
+            return None
+        # LRU: key vừa truy cập sẽ đưa về cuối.
+        _hdon_all_files_cache.move_to_end(cache_key)
+        # Deep copy để tránh mutate dữ liệu cache giữa các request.
+        return copy.deepcopy(item["value"])
+
+
+def _set_hdon_all_files_cache(cache_key, value):
+    if not HDON_ALL_FILES_CACHE_ENABLED:
+        return
+
+    total_items = len(value.get("tax_xml_list", [])) + len(value.get("buy_folder_files", [])) + len(value.get("sell_folder_files", []))
+    # Tránh giữ payload quá lớn trong RAM.
+    if total_items > HDON_ALL_FILES_CACHE_MAX_ITEMS:
+        return
+
+    now = time.time()
+    with _hdon_all_files_cache_lock:
+        # Dọn key hết hạn trước khi thêm key mới.
+        expired_keys = [k for k, v in _hdon_all_files_cache.items() if v["expire_at"] <= now]
+        for k in expired_keys:
+            _hdon_all_files_cache.pop(k, None)
+
+        _hdon_all_files_cache[cache_key] = {
+            "expire_at": now + HDON_ALL_FILES_CACHE_TTL_SECONDS,
+            "value": copy.deepcopy(value)
+        }
+        _hdon_all_files_cache.move_to_end(cache_key)
+
+        # Giới hạn số lượng key để không phình RAM khi nhiều công ty/kỳ.
+        while len(_hdon_all_files_cache) > HDON_ALL_FILES_CACHE_MAX_KEYS:
+            _hdon_all_files_cache.popitem(last=False)
 
 # Các hạng mục hiển thị 1 chấm to trên Ma trận
 YEARLY_CATEGORIES = ["TNDN", "KT", "HTK", "TNCN", "Saoke"] 
@@ -174,12 +231,13 @@ def compare_kt(folder_id: int, year: int, db: Session = Depends(get_db)):
 @router.get("/hdon/tax-files/{folder_id}")
 def get_hdon_tax_files(folder_id: int, year: int, period: str):
     folder = folder_repo.get_by_id(folder_id)
+    if not folder:
+        raise HTTPException(status_code=404, detail="Không tìm thấy doanh nghiệp")
     root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
     try:
         service = get_drive_service()
         data = get_gtgt_audit_data(service, root_id, year, period, folder.get('company_code'))
-        xml_files = [f for f in data.get('files', []) if "xml" in f['mime_type']]
-        return {"files": xml_files}
+        return {"files": data.get('files', [])}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -187,29 +245,60 @@ def get_hdon_tax_files(folder_id: int, year: int, period: str):
 def fetch_invoices_by_xml(payload: FetchInvoicesPayload):
     service = get_drive_service()
     try:
+        def _find_first_by_keywords(parent_id, keywords):
+            if not parent_id:
+                return None
+            for keyword in keywords:
+                found = find_child_folder_by_name_contain(service, parent_id, keyword)
+                if found:
+                    return found
+            return None
+
+        def _find_quarter_folder(parent_id, q):
+            candidates = [
+                f"QUY {q}", f"QUÝ {q}", f"Q{q}", f"QUY-{q}", f"QUY_{q}",
+                f"HDM_QUY-{q}", f"HDM QUY {q}", f"HDM_Q{q}",
+                f"HDB_QUY-{q}", f"HDB QUY {q}", f"HDB_Q{q}"
+            ]
+            return _find_first_by_keywords(parent_id, candidates)
+
         parsed = get_file_content_logic(service, payload.xml_drive_id)
+        if parsed.get('type') != 'xml_tax':
+            return {
+                "val23": 0,
+                "val34": 0,
+                "buy_files": [],
+                "sell_files": [],
+                "has_data": False,
+                "message": "File đã chọn không phải XML tờ khai GTGT hợp lệ"
+            }
+
         d = parsed.get('data', {})
         val23 = float(d.get('ct23', 0))
         val34 = float(d.get('ct34', 0))
 
         folder = folder_repo.get_by_id(payload.folder_id)
+        if not folder:
+            raise HTTPException(status_code=404, detail="Không tìm thấy doanh nghiệp")
         root_id = folder.get('root_folder_id')
         q_num = payload.period.replace("Q", "")
 
-        f_cty = find_child_folder_by_name_contain(service, root_id, "TAI-LIEU-CONG-TY")
+        f_cty = _find_first_by_keywords(root_id, ["TAI-LIEU-CONG-TY", "CONG-TY", "CONG TY"])
         f_year = find_child_folder_exact(service, f_cty['id'], str(payload.year)) if f_cty else None
+        if not f_year and f_cty:
+            f_year = find_child_folder_by_name_contain(service, f_cty['id'], str(payload.year))
 
         buy_files, sell_files = [], []
         if f_year:
             if val23 > 0:
-                f_buy_root = find_child_folder_by_name_contain(service, f_year['id'], "1-HOA-DON-MUA")
+                f_buy_root = _find_first_by_keywords(f_year['id'], ["1-HOA-DON-MUA", "HOA-DON-MUA", "HD-MUA"])
                 if f_buy_root:
-                    f_q_buy = find_child_folder_by_name_contain(service, f_buy_root['id'], f"HDM_QUY-{q_num}")
+                    f_q_buy = _find_quarter_folder(f_buy_root['id'], q_num)
                     if f_q_buy: buy_files = get_all_files_recursive(service, f_q_buy['id'])
             if val34 > 0:
-                f_sell_root = find_child_folder_by_name_contain(service, f_year['id'], "2-HOA-DON-BAN")
+                f_sell_root = _find_first_by_keywords(f_year['id'], ["2-HOA-DON-BAN", "HOA-DON-BAN", "HD-BAN"])
                 if f_sell_root:
-                    f_q_sell = find_child_folder_by_name_contain(service, f_sell_root['id'], f"HDB_QUY-{q_num}")
+                    f_q_sell = _find_quarter_folder(f_sell_root['id'], q_num)
                     if f_q_sell: sell_files = get_all_files_recursive(service, f_q_sell['id'])
 
         return {"val23": val23, "val34": val34, "buy_files": buy_files, "sell_files": sell_files, "has_data": (val23 > 0 or val34 > 0)}
@@ -300,41 +389,96 @@ def get_all_hdon_files(folder_id: int, year: int, period: str):
     
     root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
     q_num = period.replace("Q", "")
+
+    cache_key = f"{folder_id}:{year}:{period}"
+    cached = _get_hdon_all_files_cache(cache_key)
+    if cached is not None:
+        return cached
+
+    lookup_cache = {}
+
+    def _is_xml_file(file_item):
+        mime_type = (file_item.get('mimeType') or file_item.get('mime_type') or '').lower()
+        file_name = (file_item.get('name') or '').lower()
+        return ('xml' in mime_type) or file_name.endswith('.xml')
+
+    def _find_first_by_keywords(service, parent_id, keywords):
+        if not parent_id:
+            return None
+        for keyword in keywords:
+            key = (parent_id, keyword)
+            if key in lookup_cache:
+                found = lookup_cache[key]
+            else:
+                found = find_child_folder_by_name_contain(service, parent_id, keyword)
+                lookup_cache[key] = found
+            if found:
+                return found
+        return None
+
+    def _find_quarter_folder(service, parent_id, q):
+        candidates = [
+            f"QUY {q}", f"QUY-{q}", f"QUY_{q}", f"Q{q}",
+            f"QUÝ {q}", f"QUY{q}", f"QUÝ{q}",
+            f"HDM_QUY-{q}", f"HDM QUY {q}", f"HDM_Q{q}",
+            f"HDB_QUY-{q}", f"HDB QUY {q}", f"HDB_Q{q}"
+        ]
+        return _find_first_by_keywords(service, parent_id, candidates)
     
     try:
         from app.services.drive_service import get_drive_service, find_child_folder_by_name_contain, get_all_files_recursive, find_child_folder_exact
         service = get_drive_service()
 
         # 1. Lấy file XML từ nhánh THUẾ (Để sếp chọn làm tờ khai gốc)
+        # Ưu tiên folder Quý, nếu không có thì fallback quét toàn bộ GIA-TRI-GIA-TANG trong năm
         tax_files = []
-        f_thue = find_child_folder_by_name_contain(service, root_id, "THUE")
+        f_thue = _find_first_by_keywords(service, root_id, ["TAI-LIEU-THUE", "THUE"])
         if f_thue:
             f_year = find_child_folder_exact(service, f_thue['id'], str(year))
+            if not f_year:
+                f_year = find_child_folder_by_name_contain(service, f_thue['id'], str(year))
+
+            # Ưu tiên đi qua folder năm; nếu không có thì fallback tìm thẳng dưới nhánh THUẾ.
             f_gtgt = find_child_folder_by_name_contain(service, f_year['id'], "GIA-TRI-GIA-TANG") if f_year else None
-            f_q = find_child_folder_by_name_contain(service, f_gtgt['id'], f"QUY {q_num}") if f_gtgt else None
-            if not f_q and f_gtgt: f_q = find_child_folder_by_name_contain(service, f_gtgt['id'], f"QUÝ {q_num}")
-            if f_q: tax_files = get_all_files_recursive(service, f_q['id'])
+            if not f_gtgt:
+                f_gtgt = find_child_folder_by_name_contain(service, f_thue['id'], "GIA-TRI-GIA-TANG")
+
+            f_q = _find_quarter_folder(service, f_gtgt['id'], q_num) if f_gtgt else None
+
+            gtgt_files = []
+            if f_q:
+                gtgt_files = get_all_files_recursive(service, f_q['id'], include_extended_fields=False)
+
+            if not gtgt_files and f_gtgt:
+                gtgt_files = get_all_files_recursive(service, f_gtgt['id'], include_extended_fields=False)
+
+            tax_files = [f for f in gtgt_files if _is_xml_file(f)]
 
         # 2. Lấy file từ folder 1-HOA-DON-MUA của nhánh CÔNG TY
         buy_files = []
-        f_cty = find_child_folder_by_name_contain(service, root_id, "TAI-LIEU-CONG-TY")
+        f_cty = _find_first_by_keywords(service, root_id, ["TAI-LIEU-CONG-TY", "CONG-TY", "CONG TY"])
+        f_year_c = None
         if f_cty:
             f_year_c = find_child_folder_exact(service, f_cty['id'], str(year))
-            f_buy_root = find_child_folder_by_name_contain(service, f_year_c['id'], "1-HOA-DON-MUA") if f_year_c else None
-            f_q_buy = find_child_folder_by_name_contain(service, f_buy_root['id'], f"HDM_QUY-{q_num}") if f_buy_root else None
-            if f_q_buy: buy_files = get_all_files_recursive(service, f_q_buy['id'])
+            if not f_year_c:
+                f_year_c = find_child_folder_by_name_contain(service, f_cty['id'], str(year))
+            f_buy_root = _find_first_by_keywords(service, f_year_c['id'], ["1-HOA-DON-MUA", "HOA-DON-MUA", "HD-MUA"]) if f_year_c else None
+            f_q_buy = _find_quarter_folder(service, f_buy_root['id'], q_num) if f_buy_root else None
+            if f_q_buy: buy_files = get_all_files_recursive(service, f_q_buy['id'], include_extended_fields=False)
 
         # 3. Lấy file từ folder 2-HOA-DON-BAN của nhánh CÔNG TY
         sell_files = []
-        f_sell_root = find_child_folder_by_name_contain(service, f_year_c['id'], "2-HOA-DON-BAN") if f_year_c else None
-        f_q_sell = find_child_folder_by_name_contain(service, f_sell_root['id'], f"HDB_QUY-{q_num}") if f_sell_root else None
-        if f_q_sell: sell_files = get_all_files_recursive(service, f_q_sell['id'])
+        f_sell_root = _find_first_by_keywords(service, f_year_c['id'], ["2-HOA-DON-BAN", "HOA-DON-BAN", "HD-BAN"]) if f_year_c else None
+        f_q_sell = _find_quarter_folder(service, f_sell_root['id'], q_num) if f_sell_root else None
+        if f_q_sell: sell_files = get_all_files_recursive(service, f_q_sell['id'], include_extended_fields=False)
 
-        return {
+        result = {
             "tax_xml_list": tax_files,
             "buy_folder_files": buy_files,
             "sell_folder_files": sell_files
         }
+        _set_hdon_all_files_cache(cache_key, result)
+        return result
     except Exception as e:
         import traceback
         traceback.print_exc()

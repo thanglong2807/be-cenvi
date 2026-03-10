@@ -12,14 +12,36 @@ def get_hdon_audit_data(service, company_root_id, year, period, company_code):
     q_num = period.replace("Q", "")
     
     # --- BƯỚC 1: LẤY CHỈ THỊ TỪ XML THUẾ ---
-    f_thue = find_child_folder_by_name_contain(service, company_root_id, "TAI-LIEU-THUE")
-    f_year_thue = find_child_folder_exact(service, f_thue['id'], str(year)) if f_thue else None
-    f_gtgt_root = find_child_folder_by_name_contain(service, f_year_thue['id'], "GIA-TRI-GIA-TANG") if f_year_thue else None
-    f_q_thue = find_child_folder_by_name_contain(service, f_gtgt_root['id'], f"QUY {q_num}") if f_gtgt_root else None
-    
-    if not f_q_thue and f_gtgt_root:
-        f_q_thue = find_child_folder_by_name_contain(service, f_gtgt_root['id'], f"QUÝ {q_num}")
+    def _find_first_by_keywords(parent_id, keywords):
+        if not parent_id:
+            return None
+        for keyword in keywords:
+            found = find_child_folder_by_name_contain(service, parent_id, keyword)
+            if found:
+                return found
+        return None
 
+    def _find_quarter_folder(parent_id, q):
+        candidates = [
+            f"QUY {q}", f"QUY-{q}", f"QUY_{q}", f"Q{q}",
+            f"QUÝ {q}", f"QUY{q}", f"QUÝ{q}",
+            f"HDM_QUY-{q}", f"HDM QUY {q}", f"HDM_Q{q}",
+            f"HDB_QUY-{q}", f"HDB QUY {q}", f"HDB_Q{q}"
+        ]
+        return _find_first_by_keywords(parent_id, candidates)
+
+    f_thue = _find_first_by_keywords(company_root_id, ["TAI-LIEU-THUE", "THUE"])
+    f_year_thue = find_child_folder_exact(service, f_thue['id'], str(year)) if f_thue else None
+    if not f_year_thue and f_thue:
+        f_year_thue = find_child_folder_by_name_contain(service, f_thue['id'], str(year))
+
+    # Ưu tiên đi qua folder năm; nếu không có thì fallback tìm thẳng dưới nhánh THUẾ.
+    f_gtgt_root = find_child_folder_by_name_contain(service, f_year_thue['id'], "GIA-TRI-GIA-TANG") if f_year_thue else None
+    if not f_gtgt_root and f_thue:
+        f_gtgt_root = find_child_folder_by_name_contain(service, f_thue['id'], "GIA-TRI-GIA-TANG")
+
+    f_q_thue = _find_quarter_folder(f_gtgt_root['id'], q_num) if f_gtgt_root else None
+    
     def _is_xml_file(file_item):
         mime_type = (file_item.get('mimeType') or '').lower()
         file_name = (file_item.get('name') or '').lower()
@@ -30,38 +52,41 @@ def get_hdon_audit_data(service, company_root_id, year, period, company_code):
         return ('TK-VAT' in normalized) or ('TKVAT' in normalized)
 
     instruction = {"buy_val": 0, "sell_val": 0, "found_xml": False}
+    tax_files = []
     xml_candidates = []
+
+    # Ưu tiên quét folder quý; nếu không có (hoặc không có XML),
+    # fallback quét đệ quy toàn bộ folder GIA-TRI-GIA-TANG.
     if f_q_thue:
-        quarter_files = get_all_files_recursive(service, f_q_thue['id'])
-        xml_candidates = [
-            f for f in quarter_files
-            if _is_xml_file(f)
-        ]
-    elif f_gtgt_root:
-        all_year_files = get_all_files_recursive(service, f_gtgt_root['id'])
-        xml_candidates = [
-            f for f in all_year_files
-            if _is_xml_file(f)
-        ]
+        tax_files = get_all_files_recursive(service, f_q_thue['id'])
+        xml_candidates = [f for f in tax_files if _is_xml_file(f)]
+
+    if not xml_candidates and f_gtgt_root:
+        # Đúng yêu cầu: nếu không có folder quý thì lấy toàn bộ file trong GIA-TRI-GIA-TANG.
+        tax_files = get_all_files_recursive(service, f_gtgt_root['id'])
+        xml_candidates = [f for f in tax_files if _is_xml_file(f)]
 
     prioritized_xml = [f for f in xml_candidates if _is_tk_vat_file(f.get('name'))]
     fallback_xml = [f for f in xml_candidates if not _is_tk_vat_file(f.get('name'))]
 
     for f in prioritized_xml + fallback_xml:
-        if _is_tk_vat_file(f.get('name')) or not prioritized_xml:
-            parsed = get_file_content_logic(service, f['id'])
-            if parsed.get('type') == 'xml_tax':
-                d = parsed.get('data', {})
-                instruction = {
-                    "buy_val": float(d.get('ct23', 0)),
-                    "sell_val": float(d.get('ct34', 0)),
-                    "found_xml": True
-                }
-            break
+        parsed = get_file_content_logic(service, f['id'])
+        if parsed.get('type') != 'xml_tax':
+            continue
+
+        d = parsed.get('data', {})
+        instruction = {
+            "buy_val": float(d.get('ct23', 0)),
+            "sell_val": float(d.get('ct34', 0)),
+            "found_xml": True
+        }
+        break
 
     # --- BƯỚC 2: LẤY FILE TỪ NHÁNH CÔNG TY DỰA TRÊN SỐ LIỆU ---
-    f_cty = find_child_folder_by_name_contain(service, company_root_id, "TAI-LIEU-CONG-TY")
+    f_cty = _find_first_by_keywords(company_root_id, ["TAI-LIEU-CONG-TY", "CONG-TY", "CONG TY"])
     f_year_cty = find_child_folder_exact(service, f_cty['id'], str(year)) if f_cty else None
+    if not f_year_cty and f_cty:
+        f_year_cty = find_child_folder_by_name_contain(service, f_cty['id'], str(year))
     
     buy_files = []
     sell_files = []
@@ -69,24 +94,24 @@ def get_hdon_audit_data(service, company_root_id, year, period, company_code):
     if f_year_cty:
         # Nếu có giá trị mua vào (ct23)
         if instruction["buy_val"] > 0:
-            f_buy = find_child_folder_by_name_contain(service, f_year_cty['id'], "1-HOA-DON-MUA")
+            f_buy = _find_first_by_keywords(f_year_cty['id'], ["1-HOA-DON-MUA", "HOA-DON-MUA", "HD-MUA"])
             if f_buy:
-                f_q_buy = find_child_folder_by_name_contain(service, f_buy['id'], f"HDM_QUY-{q_num}")
+                f_q_buy = _find_quarter_folder(f_buy['id'], q_num)
                 if f_q_buy: buy_files = get_all_files_recursive(service, f_q_buy['id'])
 
         # Nếu có giá trị bán ra (ct34)
         if instruction["sell_val"] > 0:
-            f_sell = find_child_folder_by_name_contain(service, f_year_cty['id'], "2-HOA-DON-BAN")
+            f_sell = _find_first_by_keywords(f_year_cty['id'], ["2-HOA-DON-BAN", "HOA-DON-BAN", "HD-BAN"])
             if f_sell:
-                f_q_sell = find_child_folder_by_name_contain(service, f_sell['id'], f"HDB_QUY-{q_num}")
+                f_q_sell = _find_quarter_folder(f_sell['id'], q_num)
                 if f_q_sell: sell_files = get_all_files_recursive(service, f_q_sell['id'])
 
     return {
         "status": "success",
         "instruction": instruction,
+        "tax_files": tax_files,
         "files": buy_files + sell_files, # Gộp lại cho sếp chọn ở FE
+        "total_tax_files": len(tax_files),
         "total_buy": len(buy_files),
         "total_sell": len(sell_files)
     }
-
-    

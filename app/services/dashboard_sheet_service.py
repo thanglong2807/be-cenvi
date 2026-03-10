@@ -29,7 +29,7 @@ class DashboardSheetService:
         if not creds_path or not os.path.exists(creds_path):
             print(f"⚠️ DashboardSheetService: Credentials không tìm thấy tại {creds_path}")
             return None
-           
+            
         try:
             creds = service_account.Credentials.from_service_account_file(
                 creds_path, scopes=SCOPES
@@ -220,9 +220,11 @@ class DashboardSheetService:
         if start_row is None:
             start_row = getattr(settings, 'DASH_DATA_START_ROW', 7)
 
-        # ensure range
+        # If caller does not provide a range, fetch the full sheet by name.
+        # This avoids null values when GOOGLE_SHEET_RANGE is narrower than KPI mappings
+        # (for example, range ends at DA while payment_2026 uses DB:DM).
         if not range_name:
-            range_name = f"'{settings.GOOGLE_SHEET_NAME}'!{settings.GOOGLE_SHEET_RANGE}"
+            range_name = f"'{settings.GOOGLE_SHEET_NAME}'"
 
         data = self.fetch_data(range_name)
         if not data:
@@ -257,7 +259,7 @@ class DashboardSheetService:
             receivables_all = self._slice_row_by_letters(r, *receivables.split(':'))  # 12 quarters (Q1-24 to Q4-26)
             payment_2024 = self._slice_row_by_letters(r, *payment_2024_range.split(':'))
             payment_2025 = self._slice_row_by_letters(r, *payment_2025_range.split(':'))
-            payment_2026 = r[106:114] if len(r) > 113 else [None] * 8
+            payment_2026 = self._slice_row_by_letters(r, *payment_2026_range.split(':'))
             
             # Split customers by year (4 quarters per year)
             customers_2024 = customers_quarterly[0:4] if len(customers_quarterly) >= 4 else []
@@ -317,4 +319,3 @@ class DashboardSheetService:
 
 # Global instance
 dashboard_service = DashboardSheetService()
-up 

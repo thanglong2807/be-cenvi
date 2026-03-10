@@ -111,54 +111,6 @@ async def get_parsed_dashboard():
     return {"type": "parsed", "count": len(parsed), "items": parsed}
 
 
-@router.get("/payments")
-async def get_payments_data():
-    """Get payment data by year for dashboard"""
-    parsed = dashboard_service.parse_sheet_for_kpis()
-    if parsed is None:
-        return {"error": "Không thể lấy hoặc parse dữ liệu từ Sheet"}
-    
-    # Extract payment data by year
-    payments_2024 = []
-    payments_2025 = []
-    payments_2026 = []
-    
-    for item in parsed:
-        if item.get('code') and item.get('name'):
-            payments_2024.append({
-                'code': item['code'],
-                'name': item['name'],
-                'status': item['status'],
-                'quarters': item['by_type']['payments']['2024']
-            })
-            payments_2025.append({
-                'code': item['code'],
-                'name': item['name'],
-                'status': item['status'],
-                'quarters': item['by_type']['payments']['2025']
-            })
-            payments_2026.append({
-                'code': item['code'],
-                'name': item['name'],
-                'status': item['status'],
-                'quarters': item['by_type']['payments']['2026']
-            })
-    
-    return {
-        "type": "payments",
-        "years": {
-            "2024": payments_2024,
-            "2025": payments_2025,
-            "2026": payments_2026
-        },
-        "summary": {
-            "total_2024": sum([sum([q or 0 for q in item['quarters']]) for item in payments_2024]),
-            "total_2025": sum([sum([q or 0 for q in item['quarters']]) for item in payments_2025]),
-            "total_2026": sum([sum([q or 0 for q in item['quarters']]) for item in payments_2026])
-        }
-    }
-
-
 @router.get("/health")
 async def health_check():
     """Health check endpoint"""

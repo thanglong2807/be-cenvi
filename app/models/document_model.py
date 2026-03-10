@@ -24,6 +24,7 @@ class MucCon(Base):
     
     # >>> THÊM DÒNG NÀY ĐỂ HẾT LỖI <<<
     Share_Drive_Folder_ID = Column(String(255)) 
+    Metadata = Column(JSON) # Lưu trữ: ma_mau_hex, icon_code, ngay_tao
     # ================================
 
     danh_muc = relationship("DanhMuc", back_populates="muc_con")
