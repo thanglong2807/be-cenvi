@@ -1,6 +1,6 @@
 # app/schemas/document_schema.py
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -60,7 +60,7 @@ class TaiLieuLatestResponse(BaseModel):
     MC_ID: int
     Tieu_De: str
     Ngay_Het_Hieu_Luc: Optional[datetime] = None
-    Metadata: Dict[str, Any]
+    Metadata: Dict[str, Any] = Field(default_factory=dict)
     Current_Version_ID: int
     current_version: PhienBanTaiLieuResponse 
 
@@ -93,7 +93,7 @@ class TaiLieuTreeItem(BaseModel):
     MC_ID: int
     Tieu_De: str
     Ngay_Het_Hieu_Luc: Optional[datetime] = None
-    Metadata: Dict[str, Any]
+    Metadata: Dict[str, Any] = Field(default_factory=dict)
     current_version: Optional[PhienBanTaiLieuResponse] = None 
     class Config:
         from_attributes = True
@@ -102,7 +102,7 @@ class ProjectTreeItem(BaseModel):
     MC_ID: int
     Ten_Muc_Con: str
     Ngay_Het_Hieu_Luc: Optional[datetime] = None
-    tai_lieu: List[TaiLieuTreeItem] = []
+    tai_lieu: List[TaiLieuTreeItem] = Field(default_factory=list)
     class Config:
         from_attributes = True
 
@@ -111,8 +111,8 @@ class ProjectTreeItem(BaseModel):
 class CategoryTreeResponse(BaseModel):
     DM_ID: int
     Ten_Danh_Muc: str
-    Metadata: Dict[str, Any]
-    muc_con: List[ProjectTreeItem] = []
+    Metadata: Dict[str, Any] = Field(default_factory=dict)
+    muc_con: List[ProjectTreeItem] = Field(default_factory=list)
     class Config:
         from_attributes = True
 

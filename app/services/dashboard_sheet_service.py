@@ -220,9 +220,11 @@ class DashboardSheetService:
         if start_row is None:
             start_row = getattr(settings, 'DASH_DATA_START_ROW', 7)
 
-        # ensure range
+        # If caller does not provide a range, fetch the full sheet by name.
+        # This avoids null values when GOOGLE_SHEET_RANGE is narrower than KPI mappings
+        # (for example, range ends at DA while payment_2026 uses DB:DM).
         if not range_name:
-            range_name = f"'{settings.GOOGLE_SHEET_NAME}'!{settings.GOOGLE_SHEET_RANGE}"
+            range_name = f"'{settings.GOOGLE_SHEET_NAME}'"
 
         data = self.fetch_data(range_name)
         if not data:

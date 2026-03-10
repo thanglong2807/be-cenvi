@@ -250,15 +250,22 @@ def list_drive_subfolders(service, parent_id):
 
 
 
-def get_all_files_recursive(service, parent_id):
-    """Tìm tất cả file trong folder và các folder con sâu vô tận"""
+def get_all_files_recursive(service, parent_id, include_extended_fields=True):
+    """
+    Tìm tất cả file trong folder và các folder con sâu vô tận.
+
+    include_extended_fields:
+    - True: trả thêm webViewLink/createdTime (mặc định, tương thích ngược).
+    - False: chỉ trả id/name/mimeType để giảm payload và tăng tốc.
+    """
     all_files = []
     try:
+        file_fields = "files(id, name, mimeType, webViewLink, createdTime)" if include_extended_fields else "files(id, name, mimeType)"
         page_token = None
         while True:
             results = service.files().list(
                 q=f"'{parent_id}' in parents and trashed = false",
-                fields="nextPageToken, files(id, name, mimeType, webViewLink, createdTime)",
+                fields=f"nextPageToken, {file_fields}",
                 supportsAllDrives=True,
                 includeItemsFromAllDrives=True,
                 pageSize=1000,
@@ -268,7 +275,7 @@ def get_all_files_recursive(service, parent_id):
 
             for item in items:
                 if item['mimeType'] == 'application/vnd.google-apps.folder':
-                    all_files.extend(get_all_files_recursive(service, item['id']))
+                    all_files.extend(get_all_files_recursive(service, item['id'], include_extended_fields=include_extended_fields))
                 else:
                     all_files.append(item)
 
