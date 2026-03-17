@@ -1,9 +1,6 @@
 services:
   server:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: be-cenvi:local
+    image: thanglong2807/be-cenvi:latest
     container_name: cenvi_backend
     restart: unless-stopped
     ports:

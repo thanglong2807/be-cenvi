@@ -199,14 +199,14 @@ def compare_tndn(folder_id: int, year: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/compare-tncn/{folder_id}")
-def compare_tncn(folder_id: int, year: int, db: Session = Depends(get_db)):
+def compare_tncn(folder_id: int, year: int, period: str = "Q1", db: Session = Depends(get_db)):
     folder = folder_repo.get_by_id(folder_id)
     root_id = getattr(folder, 'root_folder_id', None) or folder.get('root_folder_id')
     c_code = getattr(folder, 'company_code', None) or folder.get('company_code')
     try:
         service = get_drive_service()
         drive_data = get_tncn_audit_data(service, root_id, year, c_code)
-        sql_info = get_session_info(db, folder_id, "TNCN", year, "YEAR")
+        sql_info = get_session_info(db, folder_id, "TNCN", year, period)
         return {**drive_data, **sql_info}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

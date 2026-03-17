@@ -48,11 +48,14 @@ def get_tncn_audit_data(service, company_root_id, year, company_code):
             # Lấy folder mẹ và các folder Quý/Tháng con bên trong
             subs = service.files().list(
                 q=f"'{root_folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+                fields="files(id, name)",
                 supportsAllDrives=True, includeItemsFromAllDrives=True
             ).execute().get('files', [])
-            
-            ids = [root_folder_id] + [s['id'] for s in subs]
-            for fid in ids:
+
+            # (folder_id, folder_name_hint) — dùng tên folder làm gợi ý quý cho file bên trong
+            folders_to_scan = [(root_folder_id, None)] + [(s['id'], s['name']) for s in subs]
+
+            for fid, folder_name in folders_to_scan:
                 try:
                     res = service.files().list(
                         q=f"'{fid}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false",
@@ -61,6 +64,8 @@ def get_tncn_audit_data(service, company_root_id, year, company_code):
                     ).execute()
                     for item in res.get('files', []):
                         item['origin'] = label
+                        if folder_name:
+                            item['folder_name'] = folder_name  # dùng làm fallback nhận diện quý
                         all_raw_files.append(item)
                 except: continue
 
@@ -98,6 +103,9 @@ def get_tncn_audit_data(service, company_root_id, year, company_code):
 
         for f in all_raw_files:
             q_label, f_type = detect_quarter_and_type(f['name'])
+            # Nếu tên file không có thông tin quý, dùng tên folder cha làm fallback
+            if q_label == "UNKNOWN" and f.get('folder_name'):
+                q_label, _ = detect_quarter_and_type(f['folder_name'])
             file_info = {
                 "id": f['id'], "name": f['name'], "link": f.get('webViewLink', '#'),
                 "mime_type": f['mimeType'], "created_at": f.get('createdTime'),
