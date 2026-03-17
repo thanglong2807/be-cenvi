@@ -111,6 +111,22 @@ async def get_parsed_dashboard():
     return {"type": "parsed", "count": len(parsed), "items": parsed}
 
 
+@router.get("/actual-revenue")
+async def get_actual_revenue(row: int = 1):
+    """
+    Lấy Doanh thu thực tế từ cột S đến AD.
+
+    Dữ liệu 1 dòng duy nhất, chia 4 quý × 3 năm (2024, 2025, 2026).
+
+    Query params:
+        row (int): Dòng cần đọc trong sheet (1-based). Mặc định = 1.
+    """
+    data = dashboard_service.fetch_actual_revenue(row=row)
+    if not data:
+        return {"error": "Không thể lấy dữ liệu doanh thu thực tế từ Sheet"}
+    return data
+
+
 @router.get("/health")
 async def health_check():
     """Health check endpoint"""

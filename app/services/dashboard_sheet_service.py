@@ -317,5 +317,78 @@ class DashboardSheetService:
         return parsed
 
 
+    def fetch_actual_revenue(self, row: int = 1) -> Optional[Dict[str, Any]]:
+        """
+        Lấy Doanh thu thực tế từ cột S đến AD tại 1 dòng chỉ định (mặc định dòng 1).
+
+        Cấu trúc S:AD = 12 cột → 4 quý × 3 năm (2024, 2025, 2026).
+
+        Args:
+            row: Số thứ tự dòng trong sheet (1-based). Mặc định = 1.
+
+        Returns:
+            {
+                'timestamp': str,
+                'row': int,
+                'quarters': [val, ...],   # 12 giá trị raw S→AD
+                'by_year': {
+                    '2024': [Q1, Q2, Q3, Q4],
+                    '2025': [Q1, Q2, Q3, Q4],
+                    '2026': [Q1, Q2, Q3, Q4]
+                }
+            }
+        """
+        range_name = f"'{settings.GOOGLE_SHEET_NAME}'!S{row}:AD{row}"
+
+        if not self.service:
+            print("❌ Sheets Client không khả dụng")
+            return None
+        if not self.sheet_id:
+            print("❌ Thiếu GOOGLE_SHEET_ID")
+            return None
+
+        try:
+            result = self.service.spreadsheets().values().get(
+                spreadsheetId=self.sheet_id,
+                range=range_name,
+                majorDimension='ROWS'
+            ).execute()
+
+            values = result.get('values', [])
+            row_data = values[0] if values else []
+
+            # Pad đến 12 phần tử
+            while len(row_data) < 12:
+                row_data.append(None)
+
+            # Convert sang số nếu có thể
+            cleaned = []
+            for cell in row_data:
+                if cell is None:
+                    cleaned.append(None)
+                elif isinstance(cell, str):
+                    try:
+                        cleaned.append(float(cell.replace(',', '')))
+                    except ValueError:
+                        cleaned.append(cell)
+                else:
+                    cleaned.append(cell)
+
+            return {
+                'timestamp': datetime.now().isoformat(),
+                'row': row,
+                'quarters': cleaned,
+                'by_year': {
+                    '2024': cleaned[0:4],
+                    '2025': cleaned[4:8],
+                    '2026': cleaned[8:12]
+                }
+            }
+
+        except Exception as e:
+            print(f"❌ Lỗi fetch actual_revenue từ Sheet: {e}")
+            return None
+
+
 # Global instance
 dashboard_service = DashboardSheetService()
