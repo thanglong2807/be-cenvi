@@ -35,7 +35,7 @@ jobs:
 
     steps:
       - name: Pull image mới và restart container
-        shell: powershell
+        shell: cmd
         working-directory: ${{ secrets.SERVER_WORKDIR }}
         run: |
           docker compose pull server
