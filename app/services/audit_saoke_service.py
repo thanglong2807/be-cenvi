@@ -24,21 +24,40 @@ def parse_saoke_xml_indicator(xml_content):
         return 0
 
 def get_saoke_init_data(service, company_root_id, year):
-    """Lấy XML từ folder TNDN (Quyết toán năm)"""
-    f_thue = find_child_folder_by_name_contain(service, company_root_id, "THUE")
-    f_year = find_child_folder_exact(service, f_thue['id'], str(year)) if f_thue else None
-    
-    # Vào folder THU-NHAP-DOANH-NGHIEP để lấy tờ khai năm
-    f_tndn = find_child_folder_by_name_contain(service, f_year['id'], "DOANH-NGHIEP") if f_year else None
-    if not f_tndn: f_tndn = find_child_folder_by_name_contain(service, f_year['id'], "TNDN")
+    """
+    Lấy tất cả file trong folder KE-TOAN (chia theo quý bên trong).
+    Fallback sang DOANH-NGHIEP nếu không tìm thấy KE-TOAN.
+    Cấu trúc: root -> TAI-LIEU-THUE -> {year} -> KE-TOAN -> Q1/Q2/Q3/Q4 -> files
+    """
+    f_thue = find_child_folder_by_name_contain(service, company_root_id, "TAI-LIEU-THUE")
+    if not f_thue:
+        f_thue = find_child_folder_by_name_contain(service, company_root_id, "THUE")
+    if not f_thue:
+        return []
 
-    if f_tndn:
+    f_year = find_child_folder_exact(service, f_thue['id'], str(year))
+    if not f_year:
+        f_year = find_child_folder_by_name_contain(service, f_thue['id'], str(year))
+    if not f_year:
+        return []
+
+    # Ưu tiên KE-TOAN (lấy toàn bộ file đệ quy gồm cả subfolder quý)
+    f_kt = find_child_folder_by_name_contain(service, f_year['id'], "KE-TOAN")
+    if f_kt:
+        return get_all_files_recursive(service, f_kt['id'])
+
+    # Fallback: DOANH-NGHIEP (chỉ lấy XML trực tiếp)
+    f_dn = find_child_folder_by_name_contain(service, f_year['id'], "DOANH-NGHIEP")
+    if not f_dn:
+        f_dn = find_child_folder_by_name_contain(service, f_year['id'], "TNDN")
+    if f_dn:
         res = service.files().list(
-            q=f"'{f_tndn['id']}' in parents and mimeType = 'application/xml' and trashed = false",
+            q=f"'{f_dn['id']}' in parents and mimeType = 'application/xml' and trashed = false",
             fields="files(id, name, webViewLink)",
             supportsAllDrives=True, includeItemsFromAllDrives=True
         ).execute()
         return res.get('files', [])
+
     return []
 
 def get_bank_files_logic(service, company_root_id, year):

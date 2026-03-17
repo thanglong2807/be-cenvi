@@ -9,8 +9,7 @@ import sys
 import os
 import time
 import argparse
-from datetime import datetime
-from pathlib import Path
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 # Fix Unicode encoding for Windows
@@ -94,132 +93,120 @@ def _call_with_retry(func, *args, **kwargs):
 
 def check_saoke_files(company_root_id, year):
     """
-    Check for files in sao kê folder
-    
-    Args:
-        company_root_id: ID of the company root folder
-        year: Year to check
-        
-    Returns:
-        dict: {
-            'status': 'pass' | 'warning',
-            'message': str,
-            'files_count': int,
-            'files': list
-        }
+    Kiểm tra 2 điều kiện:
+      1. Folder 4-SAO-KE-NGAN-HANG (nhánh CONG-TY) có file không.
+      2. Folder DOANH-NGHIEP (nhánh TAI-LIEU-THUE / TNDN) có file XML không.
+    Cả 2 phải có dữ liệu thì mới là 'pass'.
     """
     try:
         service = get_drive_service()
-        
-        # Find company folder (with fallback)
+        missing = []
+
+        # ----------------------------------------------------------------
+        # 1. Kiểm tra SAO KE NGAN HANG (nhánh CONG-TY)
+        # ----------------------------------------------------------------
         f_cty = _call_with_retry(find_child_folder_by_name_contain, service, company_root_id, "CONG-TY")
         if not f_cty:
             f_cty = _call_with_retry(find_child_folder_by_name_contain, service, company_root_id, "TAI-LIEU-CONG-TY")
+
         if not f_cty:
+            missing.append("Khong tim thay folder TAI-LIEU-CONG-TY")
+        else:
+            f_year_cty = _call_with_retry(find_child_folder_exact, service, f_cty['id'], str(year))
+            if not f_year_cty:
+                f_year_cty = _call_with_retry(find_child_folder_by_name_contain, service, f_cty['id'], str(year))
+
+            if not f_year_cty:
+                missing.append(f"TAI-LIEU-CONG-TY: Khong tim thay folder nam {year}")
+            else:
+                f_bank = _call_with_retry(find_child_folder_by_name_contain, service, f_year_cty['id'], "4-SAO-KE-NGAN-HANG")
+                if not f_bank:
+                    missing.append("Khong tim thay folder 4-SAO-KE-NGAN-HANG")
+                else:
+                    bank_files = _call_with_retry(get_all_files_recursive, service, f_bank['id'])
+                    if not bank_files:
+                        missing.append("Folder 4-SAO-KE-NGAN-HANG rong")
+                    else:
+                        print(f"   -> SAO-KE-NGAN-HANG: {len(bank_files)} file")
+
+        # ----------------------------------------------------------------
+        # 2. Kiểm tra file XML trong DOANH-NGHIEP (nhánh TAI-LIEU-THUE / TNDN)
+        # ----------------------------------------------------------------
+        f_thue = _call_with_retry(find_child_folder_by_name_contain, service, company_root_id, "TAI-LIEU-THUE")
+        if not f_thue:
+            f_thue = _call_with_retry(find_child_folder_by_name_contain, service, company_root_id, "THUE")
+
+        if not f_thue:
+            missing.append("Khong tim thay folder TAI-LIEU-THUE")
+        else:
+            f_year_thue = _call_with_retry(find_child_folder_exact, service, f_thue['id'], str(year))
+            if not f_year_thue:
+                f_year_thue = _call_with_retry(find_child_folder_by_name_contain, service, f_thue['id'], str(year))
+
+            if not f_year_thue:
+                missing.append(f"TAI-LIEU-THUE: Khong tim thay folder nam {year}")
+            else:
+                # Ưu tiên KE-TOAN (lấy tất cả file đệ quy, chia theo quý bên trong)
+                f_kt = _call_with_retry(find_child_folder_by_name_contain, service, f_year_thue['id'], "KE-TOAN")
+                if f_kt:
+                    kt_files = _call_with_retry(get_all_files_recursive, service, f_kt['id'])
+                    if not kt_files:
+                        missing.append("Folder KE-TOAN rong")
+                    else:
+                        print(f"   -> KE-TOAN: {len(kt_files)} file")
+                else:
+                    # Fallback: DOANH-NGHIEP (chỉ lấy XML)
+                    f_dn = _call_with_retry(find_child_folder_by_name_contain, service, f_year_thue['id'], "DOANH-NGHIEP")
+                    if not f_dn:
+                        missing.append("Khong tim thay folder KE-TOAN va DOANH-NGHIEP (TNDN)")
+                    else:
+                        all_dn_files = _call_with_retry(get_all_files_recursive, service, f_dn['id'])
+                        xml_files = [
+                            f for f in all_dn_files
+                            if 'xml' in (f.get('mimeType') or '').lower()
+                            or (f.get('name') or '').lower().endswith('.xml')
+                        ]
+                        if not xml_files:
+                            missing.append("Folder DOANH-NGHIEP (TNDN) khong co file XML")
+                        else:
+                            print(f"   -> DOANH-NGHIEP (TNDN): {len(xml_files)} file XML")
+
+        if missing:
             return {
                 'status': 'warning',
-                'message': f'Không tìm thấy folder CONG-TY/TAI-LIEU-CONG-TY cho công ty',
+                'message': ' | '.join(missing),
                 'files_count': 0,
                 'files': []
             }
-        
-        # Find year folder (with fallback)
-        f_year = _call_with_retry(find_child_folder_exact, service, f_cty['id'], str(year))
-        if not f_year:
-            f_year = _call_with_retry(find_child_folder_by_name_contain, service, f_cty['id'], str(year))
-        if not f_year:
-            return {
-                'status': 'warning',
-                'message': f'Không tìm thấy folder năm {year}',
-                'files_count': 0,
-                'files': []
-            }
-        
-        # Find sao kê bank folder
-        f_bank = _call_with_retry(find_child_folder_by_name_contain, service, f_year['id'], "4-SAO-KE-NGAN-HANG")
-        if not f_bank:
-            return {
-                'status': 'warning',
-                'message': f'Không tìm thấy folder 4-SAO-KE-NGAN-HANG cho năm {year}',
-                'files_count': 0,
-                'files': []
-            }
-        
-        # Get all files in sao kê folder (recursive)
-        files = _call_with_retry(get_all_files_recursive, service, f_bank['id'])
-        
-        if not files:
-            return {
-                'status': 'warning',
-                'message': f'Folder sao kê ngân hàng năm {year} không có file nào',
-                'files_count': 0,
-                'files': []
-            }
-        
+
         return {
             'status': 'pass',
-            'message': f'Tìm thấy {len(files)} file trong folder sao kê ngân hàng năm {year}',
-            'files_count': len(files),
-            'files': files
+            'message': f'SAO-KE va DOANH-NGHIEP deu co du lieu nam {year}',
+            'files_count': 1,
+            'files': []
         }
-        
+
     except Exception as e:
         return {
             'status': 'warning',
-            'message': f'Lỗi khi kiểm tra folder sao kê: {str(e)}',
+            'message': f'Loi khi quet Drive: {str(e)}',
             'files_count': 0,
             'files': []
         }
 
+
 # ---------------------------------------------------------------------------
 # Cập nhật DB status
 # ---------------------------------------------------------------------------
-def _mark_as_pass(
-    db: Session,
-    folder_id: int,
-    year: int,
-    files_count: int,
-    session_id: int | None = None,
-):
-    """Cập nhật hoặc tạo mới AuditSession với status = pass."""
-    note = f"[Hệ thống] Tự động quét SAO KÊ: Tìm thấy {files_count} file."
-    try:
-        if session_id:
-            audit_sess = db.query(AuditSession).filter(AuditSession.id == session_id).first()
-            if audit_sess:
-                audit_sess.status       = "pass"
-                audit_sess.category     = "Saoke"
-                audit_sess.period       = "YEAR"
-                audit_sess.overall_note = note
-                audit_sess.updated_at   = datetime.utcnow()
-                db.commit()
-                print(f"   -> [OK] DB cap nhat (UPDATE) AuditSession id={session_id} -> pass ({files_count} files)")
-        else:
-            audit_sess = AuditSession(
-                folder_id      = folder_id,
-                category       = "Saoke",
-                year           = year,
-                period         = "YEAR",
-                status         = "pass",
-                checklist_data = [],
-                overall_note   = note,
-            )
-            db.add(audit_sess)
-            db.commit()
-            db.refresh(audit_sess)
-            print(f"   -> [OK] DB ghi moi (INSERT) AuditSession id={audit_sess.id}, folder_id={folder_id}, {year} -> pass ({files_count} files)")
-    except Exception as e:
-        print(f"   -> [ERROR] Loi khi luu DB: {e}")
-        db.rollback()
-
-
 def _mark_as_missing(
     db: Session,
     folder_id: int,
     year: int,
+    message: str,
     session_id: int | None = None,
 ):
     """Cập nhật hoặc tạo mới AuditSession với status = warning."""
+    note = f"[He thong] Tu dong quet SAO KE: {message}"
     try:
         if session_id:
             audit_sess = db.query(AuditSession).filter(AuditSession.id == session_id).first()
@@ -227,24 +214,24 @@ def _mark_as_missing(
                 audit_sess.status       = "warning"
                 audit_sess.category     = "Saoke"
                 audit_sess.period       = "YEAR"
-                audit_sess.overall_note = "[Hệ thống] Tự động quét SAO KÊ: Không tìm thấy file/folder rỗng."
-                audit_sess.updated_at   = datetime.utcnow()
+                audit_sess.overall_note = note
+                audit_sess.updated_at   = datetime.now(timezone.utc)
                 db.commit()
-                print(f"   -> [OK] DB cap nhat (UPDATE) AuditSession id={session_id} -> warning")
+                print(f"   -> [OK] DB UPDATE id={session_id} -> warning")
         else:
             audit_sess = AuditSession(
                 folder_id      = folder_id,
                 category       = "Saoke",
                 year           = year,
-                period         = "YEAR",  # SAO KÊ không theo quý
+                period         = "YEAR",
                 status         = "warning",
                 checklist_data = [],
-                overall_note   = "[Hệ thống] Tự động quét SAO KÊ: Không tìm thấy file/folder rỗng.",
+                overall_note   = note,
             )
             db.add(audit_sess)
             db.commit()
             db.refresh(audit_sess)
-            print(f"   -> [OK] DB ghi moi (INSERT) AuditSession id={audit_sess.id}, folder_id={folder_id}, {year} -> warning")
+            print(f"   -> [OK] DB INSERT folder_id={folder_id} -> warning")
     except Exception as e:
         print(f"   -> [ERROR] Loi khi luu DB: {e}")
         db.rollback()
@@ -259,7 +246,7 @@ def check_missing_saoke(year: int, force: bool = False):
     folder_repo = FolderRepository()
 
     try:
-        service = get_drive_service()
+        get_drive_service()
     except Exception as e:
         print(f"[ERROR] Loi ket noi Google Drive: {e}")
         db.close()
@@ -305,18 +292,13 @@ def check_missing_saoke(year: int, force: bool = False):
             result = check_saoke_files(root_id, year)
             
             if result.get("status") == "warning":
-                print(f"   -> [WARNING] {result.get('message', 'Loi khong xac dinh')}. Danh dau warning thieu file.")
-                _mark_as_missing(db, f_id, year, session_id)
+                msg = result.get('message', 'Loi khong xac dinh')
+                print(f"   -> [WARNING] {msg}")
+                _mark_as_missing(db, f_id, year, msg, session_id)
                 count_missing += 1
             else:
-                files_count = result.get("files_count", 0)
-                if files_count == 0:
-                    print("   -> [WARNING] RONG (0 file). Danh dau warning thieu file.")
-                    _mark_as_missing(db, f_id, year, session_id)
-                    count_missing += 1
-                else:
-                    print(f"   -> [OK] Co du lieu ({files_count} files). Khong thay doi trang thai.")
-                    count_ok += 1
+                print(f"   -> [OK] {result.get('message')}. Khong thay doi trang thai.")
+                count_ok += 1
 
         except Exception as e:
             # Sau khi đã retry hết mà vẫn lỗi -> log, không đánh warning tránh false-positive

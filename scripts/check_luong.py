@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
-Script kiểm tra folder THU-NHAP-CA-NHAN trên Drive theo từng quý.
-Cấu trúc: root -> TAI-LIEU-THUE -> {year} -> THU-NHAP-CA-NHAN -> Q1/Q2/Q3/Q4
+Script kiểm tra folder LUONG trên Drive.
+Cấu trúc cần kiểm tra:
+  root -> TAI-LIEU-CONG-TY -> {year} -> 5-LUONG -> BANG-LUONG-CHAM-CONG
+  root -> TAI-LIEU-CONG-TY -> {year} -> 5-LUONG -> BAO-HIEM-XA-HOI
 
-Mỗi quý kiểm tra riêng:
-  - Subfolder quý trống hoặc không tồn tại -> đánh warning cho quý đó.
-  - Subfolder quý có file -> giữ nguyên trạng thái.
-Lưu ý: nếu file lưu trực tiếp (không chia theo quý), dùng toàn bộ folder làm fallback.
+Nếu BANG-LUONG-CHAM-CONG hoặc BAO-HIEM-XA-HOI trống (hoặc không tồn tại)
+-> đánh warning cho cả 4 quý (Q1, Q2, Q3, Q4).
+Lưu ý: nhân viên có thể không chia folder theo quý mà lưu file trực tiếp,
+nên chỉ cần kiểm tra có file nào trong folder hay không (đệ quy).
+Nếu cả 2 đều có file -> giữ nguyên trạng thái.
 """
 
 import sys
@@ -89,72 +92,87 @@ def _call_with_retry(func, *args, **kwargs):
     raise last_error
 
 # ---------------------------------------------------------------------------
-# Tìm folder THU-NHAP-CA-NHAN (dùng chung cho tất cả các quý)
+# Kiểm tra folder LUONG (1 lần cho cả năm)
 # ---------------------------------------------------------------------------
-def _find_tncn_folder(service, company_root_id: str, year: int):
+def check_luong_folders(company_root_id: str, year: int) -> dict:
     """
-    Trả về (f_tncn_id, error_message).
-    f_tncn_id = None nếu không tìm thấy.
+    Kiểm tra BANG-LUONG-CHAM-CONG và BAO-HIEM-XA-HOI bên trong 5-LUONG.
+
+    Trả về:
+      - 'warning' nếu một trong 2 folder trống hoặc không tồn tại
+      - 'pass'    nếu cả 2 đều có ít nhất 1 file
     """
-    f_thue = _call_with_retry(find_child_folder_by_name_contain, service, company_root_id, "TAI-LIEU-THUE")
-    if not f_thue:
-        f_thue = _call_with_retry(find_child_folder_by_name_contain, service, company_root_id, "THUE")
-    if not f_thue:
-        return None, "Khong tim thay folder TAI-LIEU-THUE/THUE"
+    try:
+        service = get_drive_service()
 
-    f_year = _call_with_retry(find_child_folder_exact, service, f_thue['id'], str(year))
-    if not f_year:
-        f_year = _call_with_retry(find_child_folder_by_name_contain, service, f_thue['id'], str(year))
-    if not f_year:
-        return None, f"Khong tim thay folder nam {year}"
+        # 1. Tìm TAI-LIEU-CONG-TY
+        f_cty = _call_with_retry(find_child_folder_by_name_contain, service, company_root_id, "TAI-LIEU-CONG-TY")
+        if not f_cty:
+            f_cty = _call_with_retry(find_child_folder_by_name_contain, service, company_root_id, "CONG-TY")
+        if not f_cty:
+            return {'status': 'warning', 'message': 'Khong tim thay folder TAI-LIEU-CONG-TY'}
 
-    f_tncn = _call_with_retry(find_child_folder_by_name_contain, service, f_year['id'], "NHAN-CA-NHAN")
-    if not f_tncn:
-        f_tncn = _call_with_retry(find_child_folder_by_name_contain, service, f_year['id'], "THU-NHAP")
-    if not f_tncn:
-        return None, "Khong tim thay folder THU-NHAP-CA-NHAN"
+        # 2. Tìm folder năm
+        f_year = _call_with_retry(find_child_folder_exact, service, f_cty['id'], str(year))
+        if not f_year:
+            f_year = _call_with_retry(find_child_folder_by_name_contain, service, f_cty['id'], str(year))
+        if not f_year:
+            return {'status': 'warning', 'message': f'Khong tim thay folder nam {year}'}
 
-    return f_tncn['id'], None
+        # 3. Tìm 5-LUONG
+        f_luong = _call_with_retry(find_child_folder_by_name_contain, service, f_year['id'], "5-LUONG")
+        if not f_luong:
+            f_luong = _call_with_retry(find_child_folder_by_name_contain, service, f_year['id'], "LUONG")
+        if not f_luong:
+            return {'status': 'warning', 'message': 'Khong tim thay folder 5-LUONG'}
+
+        missing = []
+
+        # 4. Kiểm tra BANG-LUONG-CHAM-CONG
+        f_bl = _call_with_retry(find_child_folder_by_name_contain, service, f_luong['id'], "BANG-LUONG-CHAM-CONG")
+        if not f_bl:
+            f_bl = _call_with_retry(find_child_folder_by_name_contain, service, f_luong['id'], "BANG-LUONG")
+        if not f_bl:
+            missing.append("Khong tim thay folder BANG-LUONG-CHAM-CONG")
+        else:
+            files_bl = _call_with_retry(get_all_files_recursive, service, f_bl['id'])
+            if not files_bl:
+                missing.append("Folder BANG-LUONG-CHAM-CONG rong")
+            else:
+                print(f"   -> BANG-LUONG-CHAM-CONG: {len(files_bl)} file")
+
+        # 5. Kiểm tra BAO-HIEM-XA-HOI
+        f_bh = _call_with_retry(find_child_folder_by_name_contain, service, f_luong['id'], "BAO-HIEM-XA-HOI")
+        if not f_bh:
+            f_bh = _call_with_retry(find_child_folder_by_name_contain, service, f_luong['id'], "BAO-HIEM")
+        if not f_bh:
+            missing.append("Khong tim thay folder BAO-HIEM-XA-HOI")
+        else:
+            files_bh = _call_with_retry(get_all_files_recursive, service, f_bh['id'])
+            if not files_bh:
+                missing.append("Folder BAO-HIEM-XA-HOI rong")
+            else:
+                print(f"   -> BAO-HIEM-XA-HOI: {len(files_bh)} file")
+
+        if missing:
+            return {'status': 'warning', 'message': ' | '.join(missing)}
+
+        return {'status': 'pass', 'message': 'Ca 2 folder BANG-LUONG-CHAM-CONG va BAO-HIEM-XA-HOI deu co du lieu'}
+
+    except Exception as e:
+        return {'status': 'warning', 'message': f'Loi khi quet Drive: {str(e)}'}
 
 # ---------------------------------------------------------------------------
-# Kiểm tra 1 quý
-# ---------------------------------------------------------------------------
-def check_tncn_quarter(service, tncn_folder_id: str, quarter: str) -> dict:
-    """
-    Kiểm tra file trong subfolder quý bên trong THU-NHAP-CA-NHAN.
-    Fallback: nếu không có subfolder quý, kiểm tra file trực tiếp trong folder cha.
-    """
-    # Tìm subfolder quý (vd: Q1, QUY-1, QUY 1, ...)
-    q_num = quarter.replace("Q", "")
-    f_q = _call_with_retry(find_child_folder_by_name_contain, service, tncn_folder_id, f"Q{q_num}")
-    if not f_q:
-        f_q = _call_with_retry(find_child_folder_by_name_contain, service, tncn_folder_id, f"QUY-{q_num}")
-    if not f_q:
-        f_q = _call_with_retry(find_child_folder_by_name_contain, service, tncn_folder_id, f"QUY {q_num}")
-
-    if f_q:
-        files = _call_with_retry(get_all_files_recursive, service, f_q['id'])
-        if files:
-            return {'status': 'pass', 'message': f'{quarter}: {len(files)} file trong subfolder'}
-        return {'status': 'warning', 'message': f'Subfolder {quarter} rong'}
-
-    # Không có subfolder quý → fallback kiểm tra file trực tiếp trong THU-NHAP-CA-NHAN
-    files_all = _call_with_retry(get_all_files_recursive, service, tncn_folder_id)
-    if files_all:
-        return {'status': 'pass', 'message': f'{quarter}: {len(files_all)} file (luu truc tiep, khong co subfolder quy)'}
-    return {'status': 'warning', 'message': f'Khong co subfolder {quarter} va folder cha rong'}
-
-# ---------------------------------------------------------------------------
-# Ghi DB
+# Ghi DB — đánh warning cho 1 quý
 # ---------------------------------------------------------------------------
 def _mark_as_missing(db: Session, folder_id: int, year: int, period: str, session_id: int | None, message: str):
-    note = f"[He thong] Tu dong quet TNCN: {message}"
+    note = f"[He thong] Tu dong quet LUONG: {message}"
     try:
         if session_id:
             audit_sess = db.query(AuditSession).filter(AuditSession.id == session_id).first()
             if audit_sess:
                 audit_sess.status       = "warning"
-                audit_sess.category     = "TNCN"
+                audit_sess.category     = "Luong"
                 audit_sess.period       = period
                 audit_sess.overall_note = note
                 audit_sess.updated_at   = datetime.utcnow()
@@ -163,7 +181,7 @@ def _mark_as_missing(db: Session, folder_id: int, year: int, period: str, sessio
         else:
             audit_sess = AuditSession(
                 folder_id      = folder_id,
-                category       = "TNCN",
+                category       = "Luong",
                 year           = year,
                 period         = period,
                 status         = "warning",
@@ -181,10 +199,10 @@ def _mark_as_missing(db: Session, folder_id: int, year: int, period: str, sessio
 # ---------------------------------------------------------------------------
 # Hàm chính
 # ---------------------------------------------------------------------------
-def check_missing_tncn(year: int, force: bool = False):
+def check_missing_luong(year: int, force: bool = False):
     settings.DOCKER = False
 
-    print(f"Bat dau chay Script: Kiem tra TNCN cho Nam {year}")
+    print(f"Bat dau chay Script: Kiem tra LUONG cho Nam {year}")
     db, db_type = _create_session()
     print(f"[DB] Dang dung DB: {db_type.upper()}")
     folder_repo = FolderRepository()
@@ -219,7 +237,7 @@ def check_missing_tncn(year: int, force: bool = False):
         if not force:
             existing = db.query(AuditSession).filter(
                 AuditSession.folder_id == f_id,
-                AuditSession.category  == "TNCN",
+                AuditSession.category  == "Luong",
                 AuditSession.year      == year,
                 AuditSession.period.in_(QUARTERS),
             ).all()
@@ -230,19 +248,14 @@ def check_missing_tncn(year: int, force: bool = False):
                 continue
 
         try:
-            service = get_drive_service()
+            result = check_luong_folders(root_id, year)
 
-            # Tìm folder THU-NHAP-CA-NHAN 1 lần cho cả năm
-            tncn_id, err = _find_tncn_folder(service, root_id, year)
-
-            if not tncn_id:
-                # Không tìm thấy folder → warning cả 4 quý
-                print(f"   -> [WARNING] {err}. Danh dau warning ca 4 quy.")
-                has_missing = False
+            if result['status'] == 'warning':
+                print(f"   -> [WARNING] {result['message']}. Danh dau warning ca 4 quy.")
                 for q in QUARTERS:
                     existing_q = db.query(AuditSession).filter(
                         AuditSession.folder_id == f_id,
-                        AuditSession.category  == "TNCN",
+                        AuditSession.category  == "Luong",
                         AuditSession.year      == year,
                         AuditSession.period    == q,
                     ).first()
@@ -250,44 +263,11 @@ def check_missing_tncn(year: int, force: bool = False):
                         print(f"   -> {q}: Da co trang thai ({existing_q.status}). Bo qua.")
                         continue
                     session_id = getattr(existing_q, "id", None) if existing_q else None
-                    _mark_as_missing(db, f_id, year, q, session_id, err)
-                    has_missing = True
-                if has_missing:
-                    count_missing += 1
-                else:
-                    count_skipped += 1
-                continue
-
-            # Kiểm tra từng quý riêng
-            any_warning = False
-            any_pass = False
-            for q in QUARTERS:
-                existing_q = db.query(AuditSession).filter(
-                    AuditSession.folder_id == f_id,
-                    AuditSession.category  == "TNCN",
-                    AuditSession.year      == year,
-                    AuditSession.period    == q,
-                ).first()
-                if not force and existing_q and existing_q.status and existing_q.status != "empty":
-                    print(f"   -> {q}: Da co trang thai ({existing_q.status}). Bo qua.")
-                    continue
-
-                result = check_tncn_quarter(service, tncn_id, q)
-                if result['status'] == 'warning':
-                    print(f"   -> [WARNING] {result['message']}")
-                    session_id = getattr(existing_q, "id", None) if existing_q else None
                     _mark_as_missing(db, f_id, year, q, session_id, result['message'])
-                    any_warning = True
-                else:
-                    print(f"   -> [OK] {result['message']}")
-                    any_pass = True
-
-            if any_warning:
                 count_missing += 1
-            elif any_pass:
-                count_ok += 1
             else:
-                count_skipped += 1
+                print(f"   -> [OK] {result['message']}. Khong thay doi trang thai.")
+                count_ok += 1
 
         except Exception as e:
             print(f"   -> [ERROR] Loi Drive API sau khi retry: {e}. Bo qua.")
@@ -300,7 +280,7 @@ def check_missing_tncn(year: int, force: bool = False):
     print(f"  Tong so cong ty            : {len(all_folders)}")
     print(f"  Bo qua (da co trang thai)  : {count_skipped}")
     print(f"  Co du data (khong update)  : {count_ok}")
-    print(f"  Co quy thieu (warning)     : {count_missing}")
+    print(f"  Thieu LUONG (warning 4 quy) : {count_missing}")
     print(f"  Loi Drive API (skip)       : {count_error}")
     print("=" * 50)
 
@@ -308,17 +288,17 @@ def check_missing_tncn(year: int, force: bool = False):
 # Entry point
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Kiem tra file TNCN tren Drive theo tung quy.")
+    parser = argparse.ArgumentParser(description="Kiem tra folder LUONG tren Drive.")
     parser.add_argument("--year",  type=int, default=datetime.now().year, help="Nam can kiem tra (mac dinh: nam hien tai)")
     parser.add_argument("--force", "-f", action="store_true",             help="Bo qua trang thai cu, chay lai toan bo")
     args = parser.parse_args()
 
     print(f"\n{'='*50}")
-    print(f"BAT DAU KIEM TRA TNCN NAM {args.year}")
+    print(f"BAT DAU KIEM TRA LUONG NAM {args.year}")
     print(f"{'='*50}\n")
 
-    check_missing_tncn(args.year, force=args.force)
+    check_missing_luong(args.year, force=args.force)
 
     print(f"\n{'='*50}")
-    print(f"HOAN THANH KIEM TRA TNCN NAM {args.year}")
+    print(f"HOAN THANH KIEM TRA LUONG NAM {args.year}")
     print(f"{'='*50}")

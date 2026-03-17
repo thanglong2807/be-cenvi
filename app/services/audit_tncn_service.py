@@ -84,16 +84,21 @@ def get_tncn_audit_data(service, company_root_id, year, company_code):
                 f_gtgt = find_child_folder_by_name_contain(service, f_year_thue['id'], "GIA-TRI-GIA-TANG")
                 scan_and_tag(f_gtgt['id'] if f_gtgt else None, "THUE-GTGT")
 
-        # B. QUÉT NHÁNH CÔNG TY (5-LUONG) - ĐÂY LÀ PHẦN MỚI BẠN YÊU CẦU
+        # B. QUÉT NHÁNH CÔNG TY (5-LUONG)
         if f_cty:
             f_year_cty = find_child_folder_exact(service, f_cty['id'], str(year))
+            if not f_year_cty:
+                f_year_cty = find_child_folder_by_name_contain(service, f_cty['id'], str(year))
             if f_year_cty:
                 f_luong_root = find_child_folder_by_name_contain(service, f_year_cty['id'], "5-LUONG")
                 if f_luong_root:
-                    # Tìm folder BANG-LUONG-CHAM-CONG
-                    f_target = find_child_folder_by_name_contain(service, f_luong_root['id'], "BANG-LUONG")
-                    if not f_target: f_target = f_luong_root # Nếu ko có folder con thì quét thẳng folder Luong
-                    
+                    # Tìm folder BANG-LUONG-CHAM-CONG trước, fallback BANG-LUONG, rồi quét thẳng 5-LUONG
+                    f_target = find_child_folder_by_name_contain(service, f_luong_root['id'], "BANG-LUONG-CHAM-CONG")
+                    if not f_target:
+                        f_target = find_child_folder_by_name_contain(service, f_luong_root['id'], "BANG-LUONG")
+                    if not f_target:
+                        f_target = f_luong_root
+
                     scan_and_tag(f_target['id'], "CTY-LUONG")
 
         # --- PHÂN LOẠI DỮ LIỆU ---
