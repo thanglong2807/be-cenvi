@@ -49,3 +49,9 @@ Desktop.ini
 *.log
 *.sqlite
 logs/
+dist/
+backups/
+*.tar
+*.rar
+*.zip
+centvi_audit.db

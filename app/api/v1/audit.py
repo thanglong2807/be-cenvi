@@ -91,7 +91,7 @@ def _set_hdon_all_files_cache(cache_key, value):
             _hdon_all_files_cache.popitem(last=False)
 
 # Các hạng mục hiển thị 1 chấm to trên Ma trận
-YEARLY_CATEGORIES = ["TNDN", "KT", "HTK", "TNCN", "Saoke"] 
+YEARLY_CATEGORIES = ["TNDN", "KT", "HTK", "Saoke"]
 
 # --- CÁC CLASS PAYLOAD ---
 class AuditActionPayload(BaseModel):
