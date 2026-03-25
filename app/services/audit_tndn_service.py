@@ -117,23 +117,8 @@ def get_tndn_audit_data(service, company_root_id, year, company_code):
             scan_folder_name = f_target['name']
             print(f"📍 Đã vào folder: {f_target['name']} (ID: {f_target['id']})")
 
-            # Luồng cũ: lấy trực tiếp từ folder đích
-            direct_results = service.files().list(
-                q=f"'{f_target['id']}' in parents and trashed = false",
-                fields="files(id, name, mimeType, webViewLink, createdTime)",
-                supportsAllDrives=True,
-                includeItemsFromAllDrives=True,
-                pageSize=1000
-            ).execute()
-            raw_files = [
-                item for item in direct_results.get('files', [])
-                if item.get('mimeType') != 'application/vnd.google-apps.folder'
-            ]
-
-            # Nếu luồng cũ không có file -> kiểm tra các folder bên trong và đệ quy lấy toàn bộ file
-            if not raw_files:
-                print("📂 Luồng cũ không có file, fallback đệ quy toàn bộ folder con trong THU-NHAP-DOANH-NGHIEP/TNDN")
-                raw_files = get_all_files_recursive(service, f_target['id'])
+            # Luôn đệ quy để lấy cả file nằm trong subfolder của THU-NHAP-DOANH-NGHIEP/TNDN
+            raw_files = get_all_files_recursive(service, f_target['id'])
         else:
             scan_folder_name = f_year['name']
             print("📂 Không thấy folder THU-NHAP-DOANH-NGHIEP/TNDN, fallback quét toàn bộ folder năm")
