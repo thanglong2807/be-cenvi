@@ -11,6 +11,7 @@ from app.schemas.company_info_schema import (
     CompanyInfoListItem,
     CompanyInfoResponse,
     CompanyInfoUpdate,
+    SeedResult,
 )
 from app.services.company_info_service import CompanyInfoService
 
@@ -80,3 +81,17 @@ def delete_company(
 ):
     service.delete(company_id)
     return None
+
+
+# ---------------------------------------------------------------------------
+# POST /company-info/seed-from-folders
+# Import toàn bộ công ty từ folders.json vào DB
+# ---------------------------------------------------------------------------
+@router.post(
+    "/seed-from-folders",
+    response_model=SeedResult,
+    status_code=status.HTTP_200_OK,
+    summary="Import công ty từ folders.json vào DB",
+)
+def seed_from_folders(service: CompanyInfoService = Depends(get_service)):
+    return service.seed_from_folders()
