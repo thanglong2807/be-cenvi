@@ -14,11 +14,12 @@ from app.api.v1.migration import router as migration_router
 from app.api.v1.document_api import router as document_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.work_links import router as work_link_router
+from app.api.v1.company_info import router as company_info_router
 
 # Import Database
 from app.core.database import engine
 # Import Models để tạo bảng
-from app.models import audit, document_model, work_link_model
+from app.models import audit, document_model, work_link_model, company_info_model
 
 # Import Services
 from app.services.dashboard_sheet_service import dashboard_service
@@ -92,6 +93,7 @@ app = FastAPI(
 audit.Base.metadata.create_all(bind=engine)
 document_model.Base.metadata.create_all(bind=engine)
 work_link_model.Base.metadata.create_all(bind=engine)
+company_info_model.Base.metadata.create_all(bind=engine)
 
 # =========================
 # 1. CẤU HÌNH CORS
@@ -123,6 +125,7 @@ app.include_router(audit_router, prefix="/api/v1")
 app.include_router(document_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(work_link_router, prefix="/api/v1")
+app.include_router(company_info_router, prefix="/api/v1")
 
 # =========================
 # 4. SERVE STATIC FILES (Dashboard HTML)
