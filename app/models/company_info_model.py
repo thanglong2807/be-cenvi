@@ -25,9 +25,11 @@ class CompanyInfo(Base):
     email_lien_he = Column(String(200), nullable=True)
     thong_tin_khac = Column(Text, nullable=True)
 
-    # LIÊN KẾT DRIVE
-    # drive_folder_id khớp với root_folder_id trong folders.json
+    # LIÊN KẾT DRIVE (từ folders.json)
     drive_folder_id = Column(String(200), nullable=True)                  # root_folder_id
+    folder_year = Column(Integer, nullable=True)                          # year
+    folder_template = Column(String(50), nullable=True)                   # template
+    folder_status = Column(String(50), nullable=True)                     # status (active/inactive)
 
     # TOKEN
     cenvi_cam_token = Column(Boolean, default=False, nullable=False)

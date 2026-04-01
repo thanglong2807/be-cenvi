@@ -24,6 +24,9 @@ class CompanyInfoCreate(BaseModel):
 
     # LIÊN KẾT DRIVE
     drive_folder_id: Optional[str] = None
+    folder_year: Optional[int] = None
+    folder_template: Optional[str] = None
+    folder_status: Optional[str] = None
 
     # TOKEN
     cenvi_cam_token: Optional[bool] = False
@@ -81,6 +84,9 @@ class CompanyInfoUpdate(BaseModel):
 
     # LIÊN KẾT DRIVE
     drive_folder_id: Optional[str] = None
+    folder_year: Optional[int] = None
+    folder_template: Optional[str] = None
+    folder_status: Optional[str] = None
 
     # TOKEN
     cenvi_cam_token: Optional[bool] = None
@@ -140,7 +146,10 @@ class CompanyInfoResponse(BaseModel):
 
     # LIÊN KẾT DRIVE
     drive_folder_id: Optional[str] = None
-    drive_folder_link: Optional[str] = None   # computed: link mở thẳng trên Drive
+    drive_folder_link: Optional[str] = None
+    folder_year: Optional[int] = None
+    folder_template: Optional[str] = None
+    folder_status: Optional[str] = None
 
     # TOKEN
     cenvi_cam_token: bool
@@ -201,6 +210,9 @@ class CompanyInfoListItem(BaseModel):
     hop_dong_loai_kh: Optional[str] = None
     drive_folder_id: Optional[str] = None
     drive_folder_link: Optional[str] = None
+    folder_year: Optional[int] = None
+    folder_template: Optional[str] = None
+    folder_status: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

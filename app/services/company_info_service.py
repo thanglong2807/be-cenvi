@@ -176,6 +176,9 @@ class CompanyInfoService:
                     phu_trach_hien_tai=phu_trach or None,
                     ma_so_thue=folder.get("mst") or None,
                     drive_folder_id=folder.get("root_folder_id") or None,
+                    folder_year=folder.get("year") or None,
+                    folder_template=folder.get("template") or None,
+                    folder_status=folder.get("status") or None,
                     created_at=now,
                     updated_at=now,
                 )
