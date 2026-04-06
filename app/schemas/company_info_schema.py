@@ -235,5 +235,5 @@ class CompanyInfoListItem(BaseModel):
 class SeedResult(BaseModel):
     total_folders: int
     created: int
-    skipped: int
+    updated: int
     errors: list[str]

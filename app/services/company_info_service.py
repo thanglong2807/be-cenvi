@@ -208,16 +208,10 @@ class CompanyInfoService:
 
     def seed_from_folders(self) -> SeedResult:
         """
-        Import toàn bộ công ty từ bảng SQL `folders` vào bảng COMPANY_INFO.
-        - ma_kh           ← company_code
-        - ten_cong_ty     ← company_name
-        - ma_so_thue      ← mst
-        - phu_trach       ← tên nhân viên tra qua manager_employee_id → employees.name
-        - drive_folder_id ← root_folder_id
-        - folder_year     ← year
-        - folder_template ← template
-        - folder_status   ← status
-        Bỏ qua các bản ghi có ma_kh đã tồn tại (không ghi đè).
+        Upsert toàn bộ công ty từ bảng SQL `folders` vào bảng COMPANY_INFO.
+        - Nếu chưa có (theo ma_kh): tạo mới
+        - Nếu đã có: cập nhật folder_year, folder_template, folder_status,
+          drive_folder_id, phu_trach_hien_tai (từ employees)
         """
         folders = self.db.query(Folder).all()
 
@@ -226,7 +220,7 @@ class CompanyInfoService:
         employee_map = {e.id: e.name for e in employees}
 
         created = 0
-        skipped = 0
+        updated = 0
         errors: list[str] = []
 
         for folder in folders:
@@ -235,29 +229,39 @@ class CompanyInfoService:
                 errors.append(f"id={folder.id}: thiếu company_code, bỏ qua")
                 continue
 
-            if self.get_by_ma_kh(company_code):
-                skipped += 1
-                continue
+            phu_trach = employee_map.get(folder.manager_employee_id) if folder.manager_employee_id else None
 
             try:
-                phu_trach = employee_map.get(folder.manager_employee_id) if folder.manager_employee_id else None
+                existing = self.get_by_ma_kh(company_code)
 
-                now = datetime.now()
-                obj = CompanyInfo(
-                    ma_kh=company_code,
-                    ten_cong_ty=folder.company_name or company_code,
-                    phu_trach_hien_tai=phu_trach,
-                    ma_so_thue=folder.mst or None,
-                    drive_folder_id=folder.root_folder_id or None,
-                    folder_year=folder.year,
-                    folder_template=folder.template or None,
-                    folder_status=folder.status or None,
-                    created_at=now,
-                    updated_at=now,
-                )
-                self.db.add(obj)
+                if existing:
+                    # Cập nhật các trường từ folders
+                    existing.folder_year     = folder.year
+                    existing.folder_template = folder.template or None
+                    existing.folder_status   = folder.status or None
+                    existing.drive_folder_id = folder.root_folder_id or existing.drive_folder_id
+                    if phu_trach:
+                        existing.phu_trach_hien_tai = phu_trach
+                    existing.updated_at = datetime.now()
+                    updated += 1
+                else:
+                    now = datetime.now()
+                    obj = CompanyInfo(
+                        ma_kh=company_code,
+                        ten_cong_ty=folder.company_name or company_code,
+                        phu_trach_hien_tai=phu_trach,
+                        ma_so_thue=folder.mst or None,
+                        drive_folder_id=folder.root_folder_id or None,
+                        folder_year=folder.year,
+                        folder_template=folder.template or None,
+                        folder_status=folder.status or None,
+                        created_at=now,
+                        updated_at=now,
+                    )
+                    self.db.add(obj)
+                    created += 1
+
                 self.db.flush()
-                created += 1
             except Exception as e:
                 self.db.rollback()
                 errors.append(f"{company_code}: {str(e)}")
@@ -266,6 +270,6 @@ class CompanyInfoService:
         return SeedResult(
             total_folders=len(folders),
             created=created,
-            skipped=skipped,
+            skipped=updated,
             errors=errors,
         )
