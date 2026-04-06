@@ -31,6 +31,15 @@ class EmployeeResponse(BaseModel):
         json_encoders = {datetime: lambda v: v.isoformat()}
 
 
+class EmployeeOption(BaseModel):
+    id: int
+    name: Optional[str] = None
+    title: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class SeedEmployeeResult(BaseModel):
     total: int
     created: int
