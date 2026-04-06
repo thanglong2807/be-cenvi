@@ -1,6 +1,5 @@
 # app/services/company_info_service.py
 
-import json
 import os
 from datetime import datetime
 from typing import List, Optional
@@ -17,7 +16,6 @@ from app.services.drive_folder_builder import apply_template
 from app.core.folder_templates import FOLDER_TEMPLATES
 
 DRIVE_FOLDER_BASE = "https://drive.google.com/drive/folders/"
-EMPLOYEES_JSON = "app/data/employees.json"
 ROOT_DRIVE_FOLDER_ID = os.getenv("ROOT_DRIVE_FOLDER_ID") or os.getenv("COMPANY_PARENT_FOLDER_ID")
 
 
@@ -25,26 +23,6 @@ def _build_drive_link(folder_id: Optional[str]) -> Optional[str]:
     if not folder_id:
         return None
     return f"{DRIVE_FOLDER_BASE}{folder_id}"
-
-
-def _load_employee_map() -> dict:
-    """Trả về dict {employee_id: employee_name}"""
-    try:
-        with open(EMPLOYEES_JSON, encoding="utf-8") as f:
-            data = json.load(f)
-        items = data.get("items", []) if isinstance(data, dict) else data
-        return {emp["id"]: emp.get("name", "") for emp in items}
-    except Exception:
-        return {}
-
-
-def _load_folders() -> list:
-    try:
-        with open(FOLDERS_JSON, encoding="utf-8") as f:
-            data = json.load(f)
-        return data.get("items", []) if isinstance(data, dict) else data
-    except Exception:
-        return []
 
 
 class CompanyInfoService:
