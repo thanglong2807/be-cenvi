@@ -25,8 +25,11 @@ class CompanyInfoCreate(BaseModel):
     # LIÊN KẾT DRIVE
     drive_folder_id: Optional[str] = None
     folder_year: Optional[int] = None
-    folder_template: Optional[str] = None
+    folder_template: Optional[str] = "STANDARD"
     folder_status: Optional[str] = None
+
+    # TẠO DRIVE KHI TẠO CÔNG TY (không lưu vào DB)
+    manager_employee_id: Optional[int] = None  # tra email nhân viên để cấp quyền Drive
 
     # TOKEN
     cenvi_cam_token: Optional[bool] = False
