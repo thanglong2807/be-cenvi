@@ -13,6 +13,7 @@ class CompanyInfoCreate(BaseModel):
     # THÔNG TIN KHÁCH HÀNG DÙNG DỊCH VỤ KẾ TOÁN THUẾ (bắt buộc)
     ma_kh: str
     ten_cong_ty: str
+    ten_cong_ty_viet_tat: Optional[str] = None  # Tên viết tắt – đặt tên folder Drive
     phu_trach_hien_tai: str
 
     # THÔNG TIN TỔNG QUAN
@@ -76,6 +77,7 @@ class CompanyInfoUpdate(BaseModel):
     # THÔNG TIN KHÁCH HÀNG DÙNG DỊCH VỤ KẾ TOÁN THUẾ
     ma_kh: Optional[str] = None
     ten_cong_ty: Optional[str] = None
+    ten_cong_ty_viet_tat: Optional[str] = None
     phu_trach_hien_tai: Optional[str] = None
 
     # THÔNG TIN TỔNG QUAN
@@ -138,6 +140,7 @@ class CompanyInfoResponse(BaseModel):
     # THÔNG TIN KHÁCH HÀNG DÙNG DỊCH VỤ KẾ TOÁN THUẾ
     ma_kh: str
     ten_cong_ty: str
+    ten_cong_ty_viet_tat: Optional[str] = None
     phu_trach_hien_tai: Optional[str] = None
 
     # THÔNG TIN TỔNG QUAN
@@ -206,6 +209,7 @@ class CompanyInfoListItem(BaseModel):
     id: int
     ma_kh: str
     ten_cong_ty: str
+    ten_cong_ty_viet_tat: Optional[str] = None
     ma_so_thue: Optional[str] = None
     phu_trach_hien_tai: Optional[str] = None
     so_dien_thoai: Optional[str] = None

@@ -15,6 +15,7 @@ class CompanyInfo(Base):
     # ma_kh khớp với company_code trong folders.json
     ma_kh = Column(String(50), nullable=False, unique=True, index=True)  # Mã KH = company_code
     ten_cong_ty = Column(String(500), nullable=False)                     # Tên công ty
+    ten_cong_ty_viet_tat = Column(String(200), nullable=True)             # Tên viết tắt – dùng đặt tên folder Drive
     phu_trach_hien_tai = Column(String(200), nullable=True)               # Tên nhân viên phụ trách
 
     # THÔNG TIN TỔNG QUAN

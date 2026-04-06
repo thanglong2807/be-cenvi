@@ -97,7 +97,7 @@ class CompanyInfoService:
         if manager_employee_id and not db_data.get("drive_folder_id"):
             drive_folder_id = self._create_drive_folder(
                 ma_kh=data.ma_kh,
-                ten_cong_ty=data.ten_cong_ty,
+                ten_cong_ty=data.ten_cong_ty_viet_tat or data.ten_cong_ty,
                 ma_so_thue=data.ma_so_thue or "",
                 manager_employee_id=manager_employee_id,
                 template=data.folder_template or "STANDARD",
