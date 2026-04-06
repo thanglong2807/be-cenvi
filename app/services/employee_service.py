@@ -9,8 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.models.employee_model import Employee
 from app.schemas.employee_schema import EmployeeCreate, EmployeeUpdate, SeedEmployeeResult
+from app.db.repositories.folder_repo import FolderRepository
+from app.services.drive_service import get_drive_service, add_permission, remove_permission_by_email
 
 EMPLOYEES_JSON = "app/data/employees.json"
+folder_repo = FolderRepository()
 
 
 class EmployeeService:
@@ -48,12 +51,51 @@ class EmployeeService:
 
     def update(self, employee_id: int, data: EmployeeUpdate) -> Employee:
         obj = self._get_or_404(employee_id)
+
+        new_email = data.email if hasattr(data, "email") else None
+        old_email = obj.email
+
+        # Nếu email thay đổi → cập nhật quyền Drive
+        if new_email and new_email != old_email:
+            # Kiểm tra email mới chưa được dùng
+            if self.get_by_email(new_email):
+                raise HTTPException(status_code=409, detail=f"Email '{new_email}' đã được dùng bởi nhân viên khác")
+            self._update_drive_permissions(employee_id, old_email, new_email)
+
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(obj, field, value)
         obj.updated_at = datetime.now()
         self.db.commit()
         self.db.refresh(obj)
         return obj
+
+    def _update_drive_permissions(self, employee_id: int, old_email: str, new_email: str):
+        """
+        Với mỗi folder do nhân viên phụ trách:
+        - Thêm quyền email mới
+        - Xóa quyền email cũ
+        """
+        folders = folder_repo.get_by_employee(employee_id)
+        if not folders:
+            return
+
+        try:
+            drive = get_drive_service()
+        except Exception as e:
+            # Không có Drive credentials → bỏ qua, chỉ cập nhật DB
+            print(f"⚠️ Không kết nối được Drive, bỏ qua cập nhật quyền: {e}")
+            return
+
+        for folder in folders:
+            folder_id = folder.get("root_folder_id")
+            if not folder_id:
+                continue
+            try:
+                add_permission(drive, folder_id, new_email)
+                remove_permission_by_email(drive, folder_id, old_email)
+                print(f"✅ Folder {folder_id}: cập nhật quyền {old_email} → {new_email}")
+            except Exception as e:
+                print(f"⚠️ Folder {folder_id}: lỗi cập nhật quyền - {e}")
 
     def delete(self, employee_id: int) -> None:
         obj = self._get_or_404(employee_id)

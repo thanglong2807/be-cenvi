@@ -13,6 +13,7 @@ class EmployeeCreate(BaseModel):
 class EmployeeUpdate(BaseModel):
     name: Optional[str] = None
     title: Optional[str] = None
+    email: Optional[EmailStr] = None
     status: Optional[str] = None
 
 
