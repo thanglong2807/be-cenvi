@@ -1,22 +1,111 @@
-from app.db.repositories.employee_repo import EmployeeRepository
+# app/services/employee_service.py
 
-repo = EmployeeRepository()
+import json
+from typing import List, Optional
 
-def list_employees():
-    return repo.get_all()
+from fastapi import HTTPException
+from sqlalchemy.orm import Session
 
-def get_employee(employee_id: int):
-    return repo.get_by_id(employee_id)
+from app.models.employee_model import Employee
+from app.schemas.employee_schema import EmployeeCreate, EmployeeUpdate, SeedEmployeeResult
 
-def create_employee(data: dict):
-    if repo.get_by_email(data["email"]):
-        raise ValueError("Email nhân viên đã tồn tại")
+EMPLOYEES_JSON = "app/data/employees.json"
 
-    return repo.create(data)
 
-def update_employee(employee_id: int, data: dict):
-    employee = repo.get_by_id(employee_id)
-    if not employee:
-        raise ValueError("Nhân viên không tồn tại")
+class EmployeeService:
+    def __init__(self, db: Session):
+        self.db = db
 
-    return repo.update(employee_id, data)
+    def _get_or_404(self, employee_id: int) -> Employee:
+        obj = self.db.query(Employee).filter(Employee.id == employee_id).first()
+        if not obj:
+            raise HTTPException(status_code=404, detail=f"Không tìm thấy nhân viên id={employee_id}")
+        return obj
+
+    # ------------------------------------------------------------------
+    # CRUD
+    # ------------------------------------------------------------------
+
+    def get_all(self) -> List[Employee]:
+        return self.db.query(Employee).order_by(Employee.id).all()
+
+    def get_by_id(self, employee_id: int) -> Employee:
+        return self._get_or_404(employee_id)
+
+    def get_by_email(self, email: str) -> Optional[Employee]:
+        return self.db.query(Employee).filter(Employee.email == email).first()
+
+    def create(self, data: EmployeeCreate) -> Employee:
+        if self.get_by_email(data.email):
+            raise HTTPException(status_code=409, detail="Email nhân viên đã tồn tại")
+        obj = Employee(**data.model_dump())
+        self.db.add(obj)
+        self.db.commit()
+        self.db.refresh(obj)
+        return obj
+
+    def update(self, employee_id: int, data: EmployeeUpdate) -> Employee:
+        obj = self._get_or_404(employee_id)
+        for field, value in data.model_dump(exclude_unset=True).items():
+            setattr(obj, field, value)
+        self.db.commit()
+        self.db.refresh(obj)
+        return obj
+
+    def delete(self, employee_id: int) -> None:
+        obj = self._get_or_404(employee_id)
+        self.db.delete(obj)
+        self.db.commit()
+
+    # ------------------------------------------------------------------
+    # SEED từ employees.json
+    # ------------------------------------------------------------------
+
+    def seed_from_json(self) -> SeedEmployeeResult:
+        """
+        Import nhân viên từ employees.json vào bảng employees.
+        Mapping: name → displayname, title → role_name
+        Bỏ qua nếu email đã tồn tại.
+        """
+        try:
+            with open(EMPLOYEES_JSON, encoding="utf-8") as f:
+                data = json.load(f)
+            items = data.get("items", []) if isinstance(data, dict) else data
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Không đọc được file JSON: {e}")
+
+        created = 0
+        skipped = 0
+        errors: list[str] = []
+
+        for emp in items:
+            email = emp.get("email", "").strip()
+            if not email:
+                errors.append(f"id={emp.get('id')}: thiếu email, bỏ qua")
+                continue
+
+            if self.get_by_email(email):
+                skipped += 1
+                continue
+
+            try:
+                obj = Employee(
+                    displayname=emp.get("name") or None,
+                    email=email,
+                    role_name=emp.get("title") or None,
+                    username=None,
+                )
+                self.db.add(obj)
+                self.db.flush()
+                created += 1
+            except Exception as e:
+                self.db.rollback()
+                errors.append(f"{email}: {str(e)}")
+
+        self.db.commit()
+        return SeedEmployeeResult(
+            total=len(items),
+            created=created,
+            skipped=skipped,
+            errors=errors,
+        )

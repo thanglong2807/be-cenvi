@@ -1,25 +1,33 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from datetime import datetime
+
 
 class EmployeeCreate(BaseModel):
-    name: str
-    title: str
+    username: Optional[str] = None
+    displayname: str
     email: EmailStr
-    status: str = "active"
+    role_name: Optional[str] = None
 
 
 class EmployeeUpdate(BaseModel):
-    name: Optional[str] = None
-    title: Optional[str] = None
-    status: Optional[str] = None
+    username: Optional[str] = None
+    displayname: Optional[str] = None
+    role_name: Optional[str] = None
 
 
 class EmployeeResponse(BaseModel):
     id: int
-    name: str
-    title: str
-    email: EmailStr
-    status: str
-    created_at: datetime
-    updated_at: datetime
+    username: Optional[str] = None
+    displayname: Optional[str] = None
+    email: Optional[str] = None
+    role_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SeedEmployeeResult(BaseModel):
+    total: int
+    created: int
+    skipped: int
+    errors: list[str]
