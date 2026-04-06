@@ -1,6 +1,7 @@
 # app/services/employee_service.py
 
 import json
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import HTTPException
@@ -22,6 +23,9 @@ class EmployeeService:
             raise HTTPException(status_code=404, detail=f"Không tìm thấy nhân viên id={employee_id}")
         return obj
 
+    def get_by_email(self, email: str) -> Optional[Employee]:
+        return self.db.query(Employee).filter(Employee.email == email).first()
+
     # ------------------------------------------------------------------
     # CRUD
     # ------------------------------------------------------------------
@@ -32,13 +36,11 @@ class EmployeeService:
     def get_by_id(self, employee_id: int) -> Employee:
         return self._get_or_404(employee_id)
 
-    def get_by_email(self, email: str) -> Optional[Employee]:
-        return self.db.query(Employee).filter(Employee.email == email).first()
-
     def create(self, data: EmployeeCreate) -> Employee:
         if self.get_by_email(data.email):
             raise HTTPException(status_code=409, detail="Email nhân viên đã tồn tại")
-        obj = Employee(**data.model_dump())
+        now = datetime.now()
+        obj = Employee(**data.model_dump(), created_at=now, updated_at=now)
         self.db.add(obj)
         self.db.commit()
         self.db.refresh(obj)
@@ -48,6 +50,7 @@ class EmployeeService:
         obj = self._get_or_404(employee_id)
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(obj, field, value)
+        obj.updated_at = datetime.now()
         self.db.commit()
         self.db.refresh(obj)
         return obj
@@ -62,11 +65,6 @@ class EmployeeService:
     # ------------------------------------------------------------------
 
     def seed_from_json(self) -> SeedEmployeeResult:
-        """
-        Import nhân viên từ employees.json vào bảng employees.
-        Mapping: name → displayname, title → role_name
-        Bỏ qua nếu email đã tồn tại.
-        """
         try:
             with open(EMPLOYEES_JSON, encoding="utf-8") as f:
                 data = json.load(f)
@@ -83,17 +81,18 @@ class EmployeeService:
             if not email:
                 errors.append(f"id={emp.get('id')}: thiếu email, bỏ qua")
                 continue
-
             if self.get_by_email(email):
                 skipped += 1
                 continue
-
             try:
+                now = datetime.now()
                 obj = Employee(
-                    displayname=emp.get("name") or None,
+                    name=emp.get("name") or None,
+                    title=emp.get("title") or None,
                     email=email,
-                    role_name=emp.get("title") or None,
-                    username=None,
+                    status=emp.get("status", "active"),
+                    created_at=now,
+                    updated_at=now,
                 )
                 self.db.add(obj)
                 self.db.flush()
@@ -103,9 +102,4 @@ class EmployeeService:
                 errors.append(f"{email}: {str(e)}")
 
         self.db.commit()
-        return SeedEmployeeResult(
-            total=len(items),
-            created=created,
-            skipped=skipped,
-            errors=errors,
-        )
+        return SeedEmployeeResult(total=len(items), created=created, skipped=skipped, errors=errors)

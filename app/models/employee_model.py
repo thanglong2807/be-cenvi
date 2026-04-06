@@ -1,15 +1,18 @@
 # app/models/employee_model.py
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
+from datetime import datetime
 
 Base = declarative_base()
 
 class Employee(Base):
     __tablename__ = "employees"
 
-    id          = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    username    = Column(String(100), nullable=True, unique=True)   # tên đăng nhập
-    displayname = Column(String(200), nullable=True)                # tên hiển thị (= name trong JSON)
-    email       = Column(String(200), nullable=True, unique=True, index=True)
-    role_name   = Column(String(100), nullable=True)                # chức vụ (= title trong JSON)
+    id         = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name       = Column(String(255), nullable=True)
+    title      = Column(String(255), nullable=True)
+    email      = Column(String(255), nullable=True, unique=True, index=True)
+    status     = Column(String(50), nullable=True, default="active")
+    created_at = Column(DateTime, default=lambda: datetime.now())
+    updated_at = Column(DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now())

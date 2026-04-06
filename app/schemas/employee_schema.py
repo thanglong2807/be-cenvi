@@ -1,29 +1,33 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from datetime import datetime
 
 
 class EmployeeCreate(BaseModel):
-    username: Optional[str] = None
-    displayname: str
+    name: str
+    title: Optional[str] = None
     email: EmailStr
-    role_name: Optional[str] = None
+    status: str = "active"
 
 
 class EmployeeUpdate(BaseModel):
-    username: Optional[str] = None
-    displayname: Optional[str] = None
-    role_name: Optional[str] = None
+    name: Optional[str] = None
+    title: Optional[str] = None
+    status: Optional[str] = None
 
 
 class EmployeeResponse(BaseModel):
     id: int
-    username: Optional[str] = None
-    displayname: Optional[str] = None
+    name: Optional[str] = None
+    title: Optional[str] = None
     email: Optional[str] = None
-    role_name: Optional[str] = None
+    status: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+        json_encoders = {datetime: lambda v: v.isoformat()}
 
 
 class SeedEmployeeResult(BaseModel):
