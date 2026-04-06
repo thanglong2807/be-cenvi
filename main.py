@@ -19,7 +19,7 @@ from app.api.v1.company_info import router as company_info_router
 # Import Database
 from app.core.database import engine
 # Import Models để tạo bảng
-from app.models import audit, document_model, work_link_model, company_info_model, employee_model
+from app.models import audit, document_model, work_link_model, company_info_model, employee_model, folder_model
 
 # Import Services
 from app.services.dashboard_sheet_service import dashboard_service

@@ -10,13 +10,13 @@ from sqlalchemy.orm import Session
 
 from app.models.company_info_model import CompanyInfo
 from app.models.employee_model import Employee
+from app.models.folder_model import Folder
 from app.schemas.company_info_schema import CompanyInfoCreate, CompanyInfoUpdate, SeedResult
 from app.services.drive_service import get_drive_service, add_permission
 from app.services.drive_folder_builder import apply_template
 from app.core.folder_templates import FOLDER_TEMPLATES
 
 DRIVE_FOLDER_BASE = "https://drive.google.com/drive/folders/"
-FOLDERS_JSON = "app/data/folders.json"
 EMPLOYEES_JSON = "app/data/employees.json"
 ROOT_DRIVE_FOLDER_ID = os.getenv("ROOT_DRIVE_FOLDER_ID") or os.getenv("COMPANY_PARENT_FOLDER_ID")
 
@@ -230,56 +230,59 @@ class CompanyInfoService:
 
     def seed_from_folders(self) -> SeedResult:
         """
-        Import toàn bộ công ty từ folders.json vào bảng COMPANY_INFO.
-        - ma_kh        ← company_code
-        - ten_cong_ty  ← company_name
-        - ma_so_thue   ← mst
-        - phu_trach    ← tên nhân viên tra qua manager_employee_id
+        Import toàn bộ công ty từ bảng SQL `folders` vào bảng COMPANY_INFO.
+        - ma_kh           ← company_code
+        - ten_cong_ty     ← company_name
+        - ma_so_thue      ← mst
+        - phu_trach       ← tên nhân viên tra qua manager_employee_id → employees.name
         - drive_folder_id ← root_folder_id
+        - folder_year     ← year
+        - folder_template ← template
+        - folder_status   ← status
         Bỏ qua các bản ghi có ma_kh đã tồn tại (không ghi đè).
         """
-        folders = _load_folders()
-        employee_map = _load_employee_map()
+        folders = self.db.query(Folder).all()
+
+        # Map employee_id → name từ bảng employees
+        employees = self.db.query(Employee).all()
+        employee_map = {e.id: e.name for e in employees}
 
         created = 0
         skipped = 0
         errors: list[str] = []
 
         for folder in folders:
-            company_code = folder.get("company_code", "").strip()
+            company_code = (folder.company_code or "").strip()
             if not company_code:
-                errors.append(f"id={folder.get('id')}: thiếu company_code, bỏ qua")
+                errors.append(f"id={folder.id}: thiếu company_code, bỏ qua")
                 continue
 
-            # Bỏ qua nếu đã có
             if self.get_by_ma_kh(company_code):
                 skipped += 1
                 continue
 
             try:
-                emp_id = folder.get("manager_employee_id")
-                phu_trach = employee_map.get(emp_id, "") if emp_id else ""
+                phu_trach = employee_map.get(folder.manager_employee_id) if folder.manager_employee_id else None
 
                 now = datetime.now()
                 obj = CompanyInfo(
                     ma_kh=company_code,
-                    ten_cong_ty=folder.get("company_name", company_code),
-                    phu_trach_hien_tai=phu_trach or None,
-                    ma_so_thue=folder.get("mst") or None,
-                    drive_folder_id=folder.get("root_folder_id") or None,
-                    folder_year=folder.get("year") or None,
-                    folder_template=folder.get("template") or None,
-                    folder_status=folder.get("status") or None,
+                    ten_cong_ty=folder.company_name or company_code,
+                    phu_trach_hien_tai=phu_trach,
+                    ma_so_thue=folder.mst or None,
+                    drive_folder_id=folder.root_folder_id or None,
+                    folder_year=folder.year,
+                    folder_template=folder.template or None,
+                    folder_status=folder.status or None,
                     created_at=now,
                     updated_at=now,
                 )
                 self.db.add(obj)
-                self.db.flush()   # để bắt lỗi sớm, chưa commit
+                self.db.flush()
                 created += 1
             except Exception as e:
                 self.db.rollback()
                 errors.append(f"{company_code}: {str(e)}")
-                continue
 
         self.db.commit()
         return SeedResult(
