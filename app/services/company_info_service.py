@@ -270,6 +270,6 @@ class CompanyInfoService:
         return SeedResult(
             total_folders=len(folders),
             created=created,
-            skipped=updated,
+            updated=updated,
             errors=errors,
         )
