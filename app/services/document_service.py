@@ -45,14 +45,22 @@ class DocumentService:
         return categories
 
     def get_category_detail(self, dm_id: int) -> DanhMuc:
-        category = self.db.query(DanhMuc).options(
-            joinedload(DanhMuc.muc_con)
-            .joinedload(MucCon.tai_lieu)
-            .joinedload(TaiLieu.current_version)
-        ).filter(DanhMuc.DM_ID == dm_id).first()
-        if not category:
-            raise HTTPException(status_code=404, detail="Danh mục không tồn tại")
-        return category
+        try:
+            category = self.db.query(DanhMuc).options(
+                joinedload(DanhMuc.muc_con)
+                .joinedload(MucCon.tai_lieu)
+                .joinedload(TaiLieu.current_version)
+            ).filter(DanhMuc.DM_ID == dm_id).first()
+            if not category:
+                raise HTTPException(status_code=404, detail="Danh mục không tồn tại")
+            return category
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"❌ Lỗi get_category_detail({dm_id}): {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Lỗi tải danh mục: {str(e)}")
 
     # =========================================================================
     # CÁC HÀM CRUD KHÁC (GIỮ NGUYÊN)
