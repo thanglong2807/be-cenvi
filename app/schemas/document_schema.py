@@ -1,6 +1,7 @@
 # app/schemas/document_schema.py
 
-from pydantic import BaseModel, Field
+import json
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -94,7 +95,18 @@ class TaiLieuTreeItem(BaseModel):
     Tieu_De: str
     Ngay_Het_Hieu_Luc: Optional[datetime] = None
     Metadata: Dict[str, Any] = Field(default_factory=dict)
-    current_version: Optional[PhienBanTaiLieuResponse] = None 
+    current_version: Optional[PhienBanTaiLieuResponse] = None
+
+    @field_validator('Metadata', mode='before')
+    @classmethod
+    def parse_metadata(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except:
+                return {}
+        return v or {}
+
     class Config:
         from_attributes = True
 # 2. Dự án (Mục Con) trong cây
@@ -113,6 +125,17 @@ class CategoryTreeResponse(BaseModel):
     Ten_Danh_Muc: str
     Metadata: Dict[str, Any] = Field(default_factory=dict)
     muc_con: List[ProjectTreeItem] = Field(default_factory=list)
+
+    @field_validator('Metadata', mode='before')
+    @classmethod
+    def parse_metadata(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except:
+                return {}
+        return v or {}
+
     class Config:
         from_attributes = True
 
