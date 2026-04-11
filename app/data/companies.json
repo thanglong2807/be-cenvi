@@ -1,29 +1,1222 @@
-[{
-  "last_id": 1,
-  "items": [
-    {
-      "code": "ca",
-      "name": "ads",
-      "mst": "123123",
-      "emails": [
-        "ádasd"
-      ],
-      "id": 1
-    }
-  ]
-},
-{
-  "last_id": 2,
-  "items": [
-    {
-      "id": 1,
-      "company_code": "2025KH01",
-      "company_name": "CÔNG TY ABC",
-      "manager_employee_id": 1,
-      "root_folder_id": "1AbcDriveID",
-      "year": 2025,
-      "template": "STANDARD"
-    }
-  ]
-}
+[
+  {
+    "ma_to_chuc": "2024KH02BM",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN CHUYỂN PHÁT NHANH BÌNH MINH",
+    "ma_so_thue": "0103068169",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH30FO",
+    "ten_to_chuc": "CÔNG TY TNHH FOTECO - HÀ NỘI",
+    "ma_so_thue": "0110222005",
+    "nguoi_phu_trach": "Nguyễn Lan Anh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nguyenlananh2974@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH68",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN TƯ VẤN PHÁT TRIỂN ASANA",
+    "ma_so_thue": "0109394497",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH69",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN GIẢI PHÁP CHUYỂN ĐỔI SỐ THG",
+    "ma_so_thue": "0109563064",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH13 +14",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN HANAMI GROUP",
+    "ma_so_thue": "0110622589",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH51",
+    "ten_to_chuc": "CÔNG TY TNHH ASAHIKO VIỆT NAM",
+    "ma_so_thue": "0110699006",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH83",
+    "ten_to_chuc": "CÔNG TY TNHH TƯ VẤN CÔNG NGHỆ SỐ NAM VIỆT",
+    "ma_so_thue": "0110760268",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH001",
+    "ten_to_chuc": "CÔNG TY LUẬT TNHH APRA",
+    "ma_so_thue": "0108858925",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH012",
+    "ten_to_chuc": "CÔNG TY TNHH SẢN XUẤT VÀ PHÁT TRIỂN DUY NHẤT",
+    "ma_so_thue": "0109322044",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH043AZ",
+    "ten_to_chuc": "CÔNG TY TNHH TẬP ĐOÀN DỊCH VỤ TƯ VẤN A TO Z",
+    "ma_so_thue": "0107494947",
+    "nguoi_phu_trach": "Nguyễn Lan Anh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nguyenlananh2974@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH030",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN DIVUVI VIỆT NAM",
+    "ma_so_thue": "0108335918",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH028",
+    "ten_to_chuc": "CÔNG TY TNHH THƯƠNG MẠI S&KV",
+    "ma_so_thue": "0901031109",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH97AZ",
+    "ten_to_chuc": "CÔNG TY TNHH THƯƠNG MẠI QUỐC MẠI QUỐC TẾ XINYING VIỆT NAM",
+    "ma_so_thue": "0318516050",
+    "nguoi_phu_trach": "Đỗ Thị Hồng Nhung",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nhungdo.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH015",
+    "ten_to_chuc": "CÔNG TY TNHH HUNGHOMES",
+    "ma_so_thue": "0110481377",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH023NT",
+    "ten_to_chuc": "CÔNG TY TNHH HUM HẠNH PHÚC NỘI TÂM",
+    "ma_so_thue": "0110500710",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "NOCODE3",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN THƯƠNG MẠI ĐẦU TƯ XÂY DỰNG BẮC Á",
+    "ma_so_thue": "0901105368",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH007",
+    "ten_to_chuc": "CÔNG TY TNHH THƯƠNG MẠI VÀ DỊCH VỤ WINECOM",
+    "ma_so_thue": "0110465022",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH022CL",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN TẬP ĐOÀN CLT",
+    "ma_so_thue": "0110486826",
+    "nguoi_phu_trach": "Nguyễn Thị Hạnh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nghanh.acctax@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH54",
+    "ten_to_chuc": "CÔNG TY TNHH ẨM THỰC DU LỊCH VÀ SỰ KIỆN NAM PHƯƠNG",
+    "ma_so_thue": "0901160778",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH86",
+    "ten_to_chuc": "CÔNG TY TNHH NEMIN GROUP",
+    "ma_so_thue": "0110749426",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH96",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN GIAO NHẬN VẬN TẢI QUỐC TẾ HAN",
+    "ma_so_thue": "0110765643",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH99",
+    "ten_to_chuc": "CÔNG TY TNHH THƯƠNG MẠI KỸ THUẬT MINH TUỆ",
+    "ma_so_thue": "0110808840",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH102",
+    "ten_to_chuc": "CÔNG TY TNHH TRUYỀN THÔNG CINÉUS",
+    "ma_so_thue": "0110786354",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH61",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN CÔNG NGHỆ M4U",
+    "ma_so_thue": "0110673671",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH77",
+    "ten_to_chuc": "CÔNG TY TNHH TƯ VẤN BẢO HIỂM CHUYÊN NGHIỆP INSUPRO",
+    "ma_so_thue": "0110589620",
+    "nguoi_phu_trach": "Nguyễn Thị Hạnh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nghanh.acctax@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH23",
+    "ten_to_chuc": "CÔNG TY TNHH ĐẦU TƯ DU LỊCH HƯƠNG GIANG",
+    "ma_so_thue": "0110182190",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH63",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN XUẤT NHẬP KHẨU HOÀNG GIA KHÁNH",
+    "ma_so_thue": "0104079974",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH64",
+    "ten_to_chuc": "CÔNG TY TNHH CƠ KHÍ TÂN LONG",
+    "ma_so_thue": "0104130236",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH42TT",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN ĐẦU TƯ VÀ PHÁT TRIỂN TỔNG HỢP TRƯỜNG THỊNH",
+    "ma_so_thue": "0107966847",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH105",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN BỌT KHÍ THỦY ĐỘNG LỰC VIỆT NAM",
+    "ma_so_thue": "0110807357",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH15",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN MÁY QUỐC TẾ SAVY",
+    "ma_so_thue": "0110625597",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH52",
+    "ten_to_chuc": "CÔNG TY TNHH ĐẦU TƯ VÀ THƯƠNG MẠI BẢO AN PHÁT",
+    "ma_so_thue": "0901160087",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH53",
+    "ten_to_chuc": "CÔNG TY TNHH ĐÀM HOUSE",
+    "ma_so_thue": "0110709624",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH55",
+    "ten_to_chuc": "CÔNG TY TNHH CƠ KHÍ, XÂY DỰNG, TM&DV HƯNG ĐẠI PHÁT",
+    "ma_so_thue": "2803115153",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH59",
+    "ten_to_chuc": "CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI VÀ DỊCH VỤ DANTECH",
+    "ma_so_thue": "0110720226",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH034",
+    "ten_to_chuc": "CÔNG TY TNHH ĐẦU TƯ XÂY DỰNG HUYỀN NHÀN",
+    "ma_so_thue": "2301263574",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH71",
+    "ten_to_chuc": "CÔNG TY TNHH XÂY DỰNG VÀ CÔNG NGHỆ MINH PHÁT",
+    "ma_so_thue": "0109571259",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH80",
+    "ten_to_chuc": "CÔNG TY TNHH TƯ VẤN CHIẾN LƯỢC DELTA",
+    "ma_so_thue": "0110754930",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH81",
+    "ten_to_chuc": "CÔNG TY LUẬT TNHH MINH LANG VÀ CỘNG SỰ",
+    "ma_so_thue": "0109862145",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2023KH003",
+    "ten_to_chuc": "CÔNG TY TNHH TRUYỀN THÔNG VÀ SẢN XUẤT ONUS",
+    "ma_so_thue": "0110504634",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH74",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN THIẾT KẾ XÂY DỰNG SƠN HOÀ",
+    "ma_so_thue": "0110737607",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH106",
+    "ten_to_chuc": "CÔNG TY TNHH DỊCH VỤ KẾT NỐI SỐ QUỐC TẾ",
+    "ma_so_thue": "0110826102",
+    "nguoi_phu_trach": "Đỗ Thị Hồng Nhung",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nhungdo.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "NOCODE4",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN FITNESS LIFE VIỆT NAM",
+    "ma_so_thue": "0108805497",
+    "nguoi_phu_trach": "Nguyễn Lan Anh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nguyenlananh2974@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH111",
+    "ten_to_chuc": "CÔNG TY TNHH TAIPEI CSP CHENGFA",
+    "ma_so_thue": "0110831367",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH119",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN KIẾN TRÚC VÀ NỘI THẤT NẮNG DESIGN",
+    "ma_so_thue": "0110839817",
+    "nguoi_phu_trach": "Nguyễn Lan Anh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nguyenlananh2974@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "NOCODE7",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN DU LỊCH VÀ THƯƠNG MẠI DỊCH VỤ MINH AN",
+    "ma_so_thue": "0110835040",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH124",
+    "ten_to_chuc": "CÔNG TY TNHH ĐẦU TƯ S.E.N",
+    "ma_so_thue": "0110782712",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH132",
+    "ten_to_chuc": "CÔNG TY TNHH ĐẦU TƯ VÀ THƯƠNG MẠI NAM THUỶ",
+    "ma_so_thue": "0110858827",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH133",
+    "ten_to_chuc": "CÔNG TY TNHH THƯƠNG MẠI VÀ DỊCH VỤ CÔNG NGHIỆP THÊU VI TÍNH QUANG TRUNG",
+    "ma_so_thue": "0110865599",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH141",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN ĐẦU TƯ THƯƠNG MẠI BTP",
+    "ma_so_thue": "0110881826",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH142",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN NGƯỜI VIẾT MÃ",
+    "ma_so_thue": "0110888966",
+    "nguoi_phu_trach": "Đỗ Thị Hồng Nhung",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nhungdo.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH143",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN THƯƠNG MẠI HƯƠNG GIA PHÁT",
+    "ma_so_thue": "0110899196",
+    "nguoi_phu_trach": "Đỗ Thị Hồng Nhung",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nhungdo.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH146",
+    "ten_to_chuc": "CÔNG TY CỔ PHẨN DỊCH VỤ TRUYỀN HÌNH TINH HOA VIỆT NAM",
+    "ma_so_thue": "0110902956",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH150",
+    "ten_to_chuc": "CÔNG TY TNHH DỊCH VỤ & THƯƠNG MẠI QUẢNG CÁO MẠNH HÙNG",
+    "ma_so_thue": "0110906830",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH151",
+    "ten_to_chuc": "CÔNG TY TNHH TM VÀ XD MINH ĐỨC M.E",
+    "ma_so_thue": "0110844609",
+    "nguoi_phu_trach": "Đỗ Thị Hồng Nhung",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nhungdo.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH155",
+    "ten_to_chuc": "CÔNG TY TNHH ĐẦU TƯ GALACTICO",
+    "ma_so_thue": "0110915507",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH153",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN DOANH NGHIỆP XÃ HỘI ƯỚC MƠ VÙNG BIÊN",
+    "ma_so_thue": "0110776155",
+    "nguoi_phu_trach": "Nguyễn Lan Anh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nguyenlananh2974@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH002",
+    "ten_to_chuc": "CÔNG TY TNHH HOMESWORLD TRAVEL VIETNAM",
+    "ma_so_thue": "0110919389",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2024KH156",
+    "ten_to_chuc": "CÔNG TY TNHH CTV SPARK",
+    "ma_so_thue": "0110869219",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH04",
+    "ten_to_chuc": "CÔNG TY TNHH CÔNG NGHỆ EVERYMATCH",
+    "ma_so_thue": "0110947869",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH06",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN TRUYỀN THÔNG TỔ CHỨC SỰ KIỆN VÀ DU LỊCH KỲ NGHỈ VIỆT",
+    "ma_so_thue": "0110943649",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH07",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN CÔNG NGHỆ ĐẠI THÀNH HN",
+    "ma_so_thue": "0110991924",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH11",
+    "ten_to_chuc": "CÔNG TY TNHH THƯƠNG MẠI VÀ DỊCH VỤ MINH HOÀNG GROUP",
+    "ma_so_thue": "0110947410",
+    "nguoi_phu_trach": "Trịnh Thị Phương Dung",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "dp2135364@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH12",
+    "ten_to_chuc": "CÔNG TY TNHH MAY XUẤT KHẨU G8",
+    "ma_so_thue": "0111005860",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH21",
+    "ten_to_chuc": "CÔNG TY TNHH BỆ PHÓNG AI",
+    "ma_so_thue": "0111058245",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH23",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN THƯƠNG MẠI ĐIỆN TỬ IMSELLA GROUP",
+    "ma_so_thue": "0110844768",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH26",
+    "ten_to_chuc": "CÔNG TY TNHH RAU CỦ QUẢ SẠCH TRANG NGÂN",
+    "ma_so_thue": "0111092976",
+    "nguoi_phu_trach": "Đỗ Thị Hồng Nhung",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nhungdo.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH27",
+    "ten_to_chuc": "CÔNG TY TNHH DREAM E-FULFILLMENT",
+    "ma_so_thue": "0111157415",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH28",
+    "ten_to_chuc": "CÔNG TY TNHH TM & DV TỐNG GIA PHÁT",
+    "ma_so_thue": "2803177992",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH29BH",
+    "ten_to_chuc": "CÔNG TY TNHH VINPRINT",
+    "ma_so_thue": "0319177298",
+    "nguoi_phu_trach": "Nguyễn Thị Hoa",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hoanguyen.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH30",
+    "ten_to_chuc": "CÔNG TY TNHH HUMOS FULFILLMENT",
+    "ma_so_thue": "2401044449",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH31BH",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN CÔNG NGHỆ MATHON",
+    "ma_so_thue": "0111233200",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH32BH",
+    "ten_to_chuc": "CÔNG TY TNHH GIẢI PHÁP CÔNG NGHỆ VNEXCO",
+    "ma_so_thue": "0111246344",
+    "nguoi_phu_trach": "Nguyễn Lan Anh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nguyenlananh2974@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH33",
+    "ten_to_chuc": "CÔNG TY TNHH NƯỚC ĐÁ HOÀNG LONG",
+    "ma_so_thue": "0111235007",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH35BH",
+    "ten_to_chuc": "CÔNG TY TNHH TT KẾT NỐI SỐ VCONECT",
+    "ma_so_thue": "0319236659",
+    "nguoi_phu_trach": "Nguyễn Thị Hoa",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hoanguyen.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH36BH",
+    "ten_to_chuc": "CÔNG TY TNHH SUTRA LAB",
+    "ma_so_thue": "0111222713",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH37",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN TƯ VẤN KẾT NỐI VÀ ĐẦU TƯ M.I.U",
+    "ma_so_thue": "0700876547",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH38",
+    "ten_to_chuc": "Công ty Xây dựng và MT Hoàng Huy",
+    "ma_so_thue": "0108872905",
+    "nguoi_phu_trach": "Nguyễn Lan Anh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nguyenlananh2974@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH39",
+    "ten_to_chuc": "CÔNG TY TNHH IN ẤN DƯƠNG QUÂN",
+    "ma_so_thue": "0319283218",
+    "nguoi_phu_trach": "Nguyễn Thị Hoa",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hoanguyen.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH41XU",
+    "ten_to_chuc": "CÔNG TY TNHH TỨ MỸ LONG CÚC",
+    "ma_so_thue": "0319108907",
+    "nguoi_phu_trach": "Nguyễn Thị Hoa",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hoanguyen.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH42XU",
+    "ten_to_chuc": "CÔNG TY TNHH THƯƠNG MẠI XUẤT NHẬP KHẨU FSF",
+    "ma_so_thue": "0318956686",
+    "nguoi_phu_trach": "Nguyễn Thị Hoa",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hoanguyen.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH43DH",
+    "ten_to_chuc": "CÔNG TY TNHH MINH ANH KHÔI GIFT",
+    "ma_so_thue": "0111287291",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH44",
+    "ten_to_chuc": "CÔNG TNHH QUẢNG CÁO VÀ THƯƠNG MẠI TẤN PHÁT",
+    "ma_so_thue": "2401048563",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH46DH",
+    "ten_to_chuc": "CÔNG TY TNHH CÁI NÀY HAY ĐẤY",
+    "ma_so_thue": "0319278916",
+    "nguoi_phu_trach": "Nguyễn Thị Hoa",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hoanguyen.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH47DH",
+    "ten_to_chuc": "CÔNG TY TNHH CON ONG THỢ",
+    "ma_so_thue": "0319270850",
+    "nguoi_phu_trach": "Nguyễn Thị Hoa",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hoanguyen.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH48DH",
+    "ten_to_chuc": "CÔNG TY TNHH CÔNG NGHỆ ĐIỆN MÁY NAM PHONG",
+    "ma_so_thue": "0111297099",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH49",
+    "ten_to_chuc": "CÔNG TY TNHH THIẾT BỊ CÔNG NGHỆ HANC",
+    "ma_so_thue": "2301368947",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH50BH",
+    "ten_to_chuc": "CÔNG TY TNHH TƯ VẤN THIẾT KẾ XÂY DỰNG TRÍ NGUYỄN",
+    "ma_so_thue": "3901375218",
+    "nguoi_phu_trach": "Nguyễn Thị Hoa",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hoanguyen.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH51",
+    "ten_to_chuc": "CÔNG TY TNHH THƯƠNG MẠI & VẬN TẢI PHOENIX",
+    "ma_so_thue": "4601656731",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH55",
+    "ten_to_chuc": "CÔNG TY TNHH TƯ VẤN THIẾT KẾ KIẾN TRÚC VÀ NỘI THẤT MỘC DECOR",
+    "ma_so_thue": "0111289531",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH57DH",
+    "ten_to_chuc": "CÔNG TY TNHH MONARCH CREATIVE STUDIOS",
+    "ma_so_thue": "0319327112",
+    "nguoi_phu_trach": "Nguyễn Thị Hoa",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hoanguyen.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH58",
+    "ten_to_chuc": "CÔNG TY TNHH BEUP LEARNING SOLUTIONS",
+    "ma_so_thue": "3301755602",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH59",
+    "ten_to_chuc": "CÔNG TY TNHH THIẾT KẾ VÀ SẢN XUẤT NỘI THẤT PHÚC AN ĐƯỜNG",
+    "ma_so_thue": "0110844165",
+    "nguoi_phu_trach": "Phùng Duy Anh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nhan.phan@cenvi.vn",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH60",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN GIÁO DỤC EDUCAP VIỆT NAM",
+    "ma_so_thue": "0107319399",
+    "nguoi_phu_trach": "Trần Thị Mai Phương",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "phuong.tran.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH62",
+    "ten_to_chuc": "CÔNG TY TNHH DU LỊCH TAHA TRAVEL 2",
+    "ma_so_thue": "0110902610",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH63XU",
+    "ten_to_chuc": "CÔNG TY TNHH ĐÍCH ĐẾN",
+    "ma_so_thue": "0319272777",
+    "nguoi_phu_trach": "Nguyễn Thị Hoa",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hoanguyen.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH66",
+    "ten_to_chuc": "CÔNG TY TNHH THƯƠNG MẠI & XUẤT NHẬP KHẨU THIÊN PHÚ VIỆT NAM",
+    "ma_so_thue": "5100511053",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH67",
+    "ten_to_chuc": "CÔNG TY TNHH THỰC PHẨM ACHAU MART",
+    "ma_so_thue": "0319316495",
+    "nguoi_phu_trach": "Nguyễn Thị Hoa",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hoanguyen.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2025KH68",
+    "ten_to_chuc": "CÔNG TY TNHH HOÀNG PHÚC KC",
+    "ma_so_thue": "2803204036",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH02",
+    "ten_to_chuc": "CÔNG TY LK - L2",
+    "ma_so_thue": "0110730369",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH03",
+    "ten_to_chuc": "CÔNG TY TNHH AN NHƯ BEDDING",
+    "ma_so_thue": "0111318775",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH04",
+    "ten_to_chuc": "CÔNG TY TNHH VẬT TƯ XÂY DỰNG NGUYÊN DƯƠNG",
+    "ma_so_thue": "0111340121",
+    "nguoi_phu_trach": "Nguyễn Thị Hồng",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hongnt901@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH07",
+    "ten_to_chuc": "CÔNG TY TNHH GIẢI PHÁP TRUYỀN THÔNG HỪNG ĐÔNG",
+    "ma_so_thue": "0111362238",
+    "nguoi_phu_trach": "Nguyễn Thị Hạnh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nghanh.acctax@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH08",
+    "ten_to_chuc": "CÔNG TY CP THƯƠNG MẠI VÀ ĐẦU TƯ HFS",
+    "ma_so_thue": "0111301387",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH09",
+    "ten_to_chuc": "CÔNG TY TNHH CNK",
+    "ma_so_thue": "0109597507",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH10",
+    "ten_to_chuc": "CÔNG TY TNHH DỊCH VỤ XÂY DỰNG VÀ THƯƠNG MẠI TÚ XÂM",
+    "ma_so_thue": "0111363270",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH11",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN ĐẦU TƯ THƯƠNG MẠI DỊCH VỤ VÀ XUẤT NHẬP KHẨU BBG VIỆT NAM",
+    "ma_so_thue": "5801563042",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH13",
+    "ten_to_chuc": "CÔNG TY TNHH CƠ KHÍ XÂY DỰNG CÔNG NGHỆ ĐẠI AN 683",
+    "ma_so_thue": "0110941722",
+    "nguoi_phu_trach": "Vương Cẩm Vân",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "van.vuong.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH14",
+    "ten_to_chuc": "CÔNG TY TNHH THỰC PHẨM NGUYỄN GIA NGUYÊN",
+    "ma_so_thue": "0111390796",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH15",
+    "ten_to_chuc": "CÔNG TY TNHH AN HỘI AN DƯƠNG NỘI",
+    "ma_so_thue": "0111377347",
+    "nguoi_phu_trach": "Trần Đình Khôi",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "trankhoi.forwork@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH16",
+    "ten_to_chuc": "CÔNG TY TNHH ĐẦU TƯ, SẢN XUẤT VÀ THƯƠNG MẠI KỶ NGUYÊN XANH",
+    "ma_so_thue": "0111372814",
+    "nguoi_phu_trach": "Trịnh Thị Phương Dung",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "dp2135364@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH18",
+    "ten_to_chuc": "CÔNG TY TNHH DU LỊCH CHAVELIE VIỆT NAM",
+    "ma_so_thue": "0111388028",
+    "nguoi_phu_trach": "Nguyễn Thị Hạnh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nghanh.acctax@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH19",
+    "ten_to_chuc": "CÔNG TY TNHH NHÔM KÍNH TRỌNG LƯU",
+    "ma_so_thue": "5901245188",
+    "nguoi_phu_trach": "Nguyễn Thị Hạnh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nghanh.acctax@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH26",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN TƯ VẤN XÂY DỰNG VÀ THƯƠNG MẠI T&N",
+    "ma_so_thue": "0111381135",
+    "nguoi_phu_trach": "Đỗ Thị Hồng Nhung",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nhungdo.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH27",
+    "ten_to_chuc": "CÔNG TY TNHH ĐẦU TƯ TMDV HƯNG LONG",
+    "ma_so_thue": "0319337921",
+    "nguoi_phu_trach": "Nguyễn Thị Hoa",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "hoanguyen.cenvi@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH29",
+    "ten_to_chuc": "CÔNG TY TNHH CÒ LẢ TAILOR",
+    "ma_so_thue": "0111271848",
+    "nguoi_phu_trach": "Nguyễn Thị Hạnh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nghanh.acctax@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH35",
+    "ten_to_chuc": "CÔNG TY TNHH NATIVO",
+    "ma_so_thue": "0111342954",
+    "nguoi_phu_trach": "Nguyễn Thị Hạnh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nghanh.acctax@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH36",
+    "ten_to_chuc": "CÔNG TY TNHH UNIVO",
+    "ma_so_thue": "0111197224",
+    "nguoi_phu_trach": "Nguyễn Thị Hạnh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nghanh.acctax@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH38",
+    "ten_to_chuc": "CÔNG TY TNHH ĐẦU TƯ VÀ PHÁT TRIỂN THIỆN NGUYÊN HOLDINGS",
+    "ma_so_thue": "5801563934",
+    "nguoi_phu_trach": "Nguyễn Thị Hạnh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nghanh.acctax@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH39",
+    "ten_to_chuc": "CÔNG TY TNHH SYNSOCIAL VIỆT NAM",
+    "ma_so_thue": "0111405555",
+    "nguoi_phu_trach": "Nguyễn Thị Hạnh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nghanh.acctax@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH42",
+    "ten_to_chuc": "CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ CƠ ĐIỆN LẠNH SÔNG HỒNG",
+    "ma_so_thue": "0111411608",
+    "nguoi_phu_trach": "Nguyễn Thị Hạnh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "nghanh.acctax@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  },
+  {
+    "ma_to_chuc": "2026KH43",
+    "ten_to_chuc": "CÔNG TY CỔ PHẦN TƯ VẤN GIÁM SÁT XÂY DỰNG VÀ THƯƠNG MẠI AN PHÁT",
+    "ma_so_thue": "0110887881",
+    "nguoi_phu_trach": "Hoàng Nhật Minh",
+    "pmkt_ten": "Easybooks",
+    "pmkt_link": "https://portal.easybooks.vn/",
+    "pmkt_tai_khoan": "minh66tk@gmail.com",
+    "pmkt_mat_khau": "Cenvi@123"
+  }
 ]
