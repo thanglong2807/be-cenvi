@@ -109,6 +109,12 @@ def import_tax_companies(db: Session, companies_data: List[Dict[str, Any]]) -> D
             # Check if company already exists
             existing = db.query(CompanyInfo).filter(CompanyInfo.ma_kh == ma_kh).first()
 
+            # Extract Easybooks and other fields
+            pmkt_ten = company_data.get('pmkt_ten')
+            pmkt_link = company_data.get('pmkt_link')
+            pmkt_tai_khoan = company_data.get('pmkt_tai_khoan')
+            pmkt_mat_khau = company_data.get('pmkt_mat_khau')
+
             if existing:
                 # Update existing company
                 existing.ten_cong_ty = ten_cong_ty
@@ -121,6 +127,16 @@ def import_tax_companies(db: Session, companies_data: List[Dict[str, Any]]) -> D
                     employee = get_or_create_employee(db, phu_trach)
                     if employee:
                         existing.phu_trach_hien_tai = phu_trach
+
+                # Update Easybooks fields
+                if pmkt_ten:
+                    existing.pmkt_ten = pmkt_ten
+                if pmkt_link:
+                    existing.pmkt_link = pmkt_link
+                if pmkt_tai_khoan:
+                    existing.pmkt_tai_khoan = pmkt_tai_khoan
+                if pmkt_mat_khau:
+                    existing.pmkt_mat_khau = pmkt_mat_khau
 
                 existing.updated_at = datetime.now()
                 result['updated'] += 1
@@ -140,6 +156,10 @@ def import_tax_companies(db: Session, companies_data: List[Dict[str, Any]]) -> D
                     ten_cong_ty=ten_cong_ty,
                     ma_so_thue=ma_so_thue,
                     phu_trach_hien_tai=phu_trach_name,
+                    pmkt_ten=pmkt_ten,
+                    pmkt_link=pmkt_link,
+                    pmkt_tai_khoan=pmkt_tai_khoan,
+                    pmkt_mat_khau=pmkt_mat_khau,
                     created_at=now,
                     updated_at=now
                 )
