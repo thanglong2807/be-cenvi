@@ -150,10 +150,15 @@ def check_saoke_files(company_root_id, year):
                 f_kt = _call_with_retry(find_child_folder_by_name_contain, service, f_year_thue['id'], "KE-TOAN")
                 if f_kt:
                     kt_files = _call_with_retry(get_all_files_recursive, service, f_kt['id'])
-                    if not kt_files:
-                        missing.append("Folder KE-TOAN rong")
+                    xml_kt = [
+                        f for f in kt_files
+                        if 'xml' in (f.get('mimeType') or '').lower()
+                        or (f.get('name') or '').lower().endswith('.xml')
+                    ]
+                    if not xml_kt:
+                        missing.append("Khong co file bao cao tai chinh (KE-TOAN)")
                     else:
-                        print(f"   -> KE-TOAN: {len(kt_files)} file")
+                        print(f"   -> KE-TOAN: {len(xml_kt)} file XML")
                 else:
                     # Fallback: DOANH-NGHIEP (chỉ lấy XML)
                     f_dn = _call_with_retry(find_child_folder_by_name_contain, service, f_year_thue['id'], "DOANH-NGHIEP")

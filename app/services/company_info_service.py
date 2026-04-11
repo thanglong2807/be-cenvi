@@ -273,3 +273,87 @@ class CompanyInfoService:
             updated=updated,
             errors=errors,
         )
+
+    # ------------------------------------------------------------------
+    # BULK IMPORT - Nhập dữ liệu công ty từ danh sách
+    # ------------------------------------------------------------------
+
+    def bulk_import_tax_companies(self, companies_data: list) -> dict:
+        """
+        Nhập hoặc cập nhật danh sách công ty thuế điện tử.
+
+        Args:
+            companies_data: Danh sách dict với các trường:
+                - ma_to_chuc hoặc ma_kh: Mã tổ chức (bắt buộc)
+                - ten_to_chuc hoặc ten_cong_ty: Tên tổ chức (bắt buộc)
+                - ma_so_thue: Mã số thuế (tùy chọn)
+                - nguoi_phu_trach hoặc phu_trach_hien_tai: Người phụ trách (tùy chọn)
+
+        Returns:
+            Dict với counts: {'created': X, 'updated': Y, 'errors': Z, 'error_details': [...]}
+        """
+        result = {
+            'created': 0,
+            'updated': 0,
+            'errors': 0,
+            'error_details': []
+        }
+
+        for idx, company_data in enumerate(companies_data, 1):
+            try:
+                # Extract fields với nhiều tên khác nhau
+                ma_kh = company_data.get('ma_to_chuc') or company_data.get('ma_kh')
+                ten_cong_ty = company_data.get('ten_to_chuc') or company_data.get('ten_cong_ty')
+                ma_so_thue = company_data.get('ma_so_thue')
+                phu_trach = company_data.get('nguoi_phu_trach') or company_data.get('phu_trach_hien_tai')
+
+                # Validate bắt buộc
+                if not ma_kh or not ma_kh.strip():
+                    result['errors'] += 1
+                    result['error_details'].append(f"Row {idx}: Thiếu mã tổ chức (ma_to_chuc/ma_kh)")
+                    continue
+
+                if not ten_cong_ty or not ten_cong_ty.strip():
+                    result['errors'] += 1
+                    result['error_details'].append(f"Row {idx} ({ma_kh}): Thiếu tên tổ chức")
+                    continue
+
+                ma_kh = ma_kh.strip()
+                ten_cong_ty = ten_cong_ty.strip()
+                ma_so_thue = ma_so_thue.strip() if ma_so_thue else None
+
+                # Kiểm tra công ty đã tồn tại
+                existing = self.get_by_ma_kh(ma_kh)
+
+                if existing:
+                    # Cập nhật công ty hiện tại
+                    existing.ten_cong_ty = ten_cong_ty
+                    if ma_so_thue:
+                        existing.ma_so_thue = ma_so_thue
+                    if phu_trach and phu_trach.strip():
+                        existing.phu_trach_hien_tai = phu_trach.strip()
+                    existing.updated_at = datetime.now()
+                    result['updated'] += 1
+                else:
+                    # Tạo công ty mới
+                    now = datetime.now()
+                    company = CompanyInfo(
+                        ma_kh=ma_kh,
+                        ten_cong_ty=ten_cong_ty,
+                        ma_so_thue=ma_so_thue,
+                        phu_trach_hien_tai=phu_trach.strip() if phu_trach else None,
+                        created_at=now,
+                        updated_at=now
+                    )
+                    self.db.add(company)
+                    result['created'] += 1
+
+                self.db.flush()
+
+            except Exception as e:
+                self.db.rollback()
+                result['errors'] += 1
+                result['error_details'].append(f"Row {idx}: {str(e)}")
+
+        self.db.commit()
+        return result

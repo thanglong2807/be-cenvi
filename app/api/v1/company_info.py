@@ -12,6 +12,8 @@ from app.schemas.company_info_schema import (
     CompanyInfoResponse,
     CompanyInfoUpdate,
     SeedResult,
+    CompanyTaxImportItem,
+    BulkImportResult,
 )
 from app.services.company_info_service import CompanyInfoService
 
@@ -95,3 +97,30 @@ def delete_company(
 )
 def seed_from_folders(service: CompanyInfoService = Depends(get_service)):
     return service.seed_from_folders()
+
+
+# ---------------------------------------------------------------------------
+# POST /company-info/bulk-import
+# Nhập danh sách công ty thuế điện tử
+# ---------------------------------------------------------------------------
+@router.post(
+    "/bulk-import",
+    response_model=BulkImportResult,
+    status_code=status.HTTP_200_OK,
+    summary="Nhập danh sách công ty thuế điện tử",
+)
+def bulk_import_companies(
+    companies: List[CompanyTaxImportItem],
+    service: CompanyInfoService = Depends(get_service),
+):
+    """
+    Nhập danh sách công ty thuế điện tử.
+
+    Mỗi công ty có thể cung cấp:
+    - ma_to_chuc hoặc ma_kh: Mã tổ chức (bắt buộc)
+    - ten_to_chuc hoặc ten_cong_ty: Tên tổ chức (bắt buộc)
+    - ma_so_thue: Mã số thuế (tùy chọn)
+    - nguoi_phu_trach hoặc phu_trach_hien_tai: Người phụ trách (tùy chọn)
+    """
+    companies_data = [c.model_dump() for c in companies]
+    return service.bulk_import_tax_companies(companies_data)

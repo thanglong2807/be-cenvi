@@ -117,14 +117,16 @@ def _find_tncn_folder(service, company_root_id: str, year: int):
     return f_tncn['id'], None
 
 # ---------------------------------------------------------------------------
-# Kiểm tra 1 quý
+# Kiểm tra 1 quý — yêu cầu tối thiểu 4 file (xml, bảng lương, BCC, HĐLĐ)
 # ---------------------------------------------------------------------------
+MIN_FILES = 4
+
 def check_tncn_quarter(service, tncn_folder_id: str, quarter: str) -> dict:
     """
     Kiểm tra file trong subfolder quý bên trong THU-NHAP-CA-NHAN.
-    Fallback: nếu không có subfolder quý, kiểm tra file trực tiếp trong folder cha.
+    Yêu cầu: >= 4 file (xml, bảng lương, BCC, HĐLĐ).
+    Fallback: nếu không có subfolder quý, kiểm tra toàn bộ folder (nhân viên gộp cả năm).
     """
-    # Tìm subfolder quý (vd: Q1, QUY-1, QUY 1, ...)
     q_num = quarter.replace("Q", "")
     f_q = _call_with_retry(find_child_folder_by_name_contain, service, tncn_folder_id, f"Q{q_num}")
     if not f_q:
@@ -134,15 +136,19 @@ def check_tncn_quarter(service, tncn_folder_id: str, quarter: str) -> dict:
 
     if f_q:
         files = _call_with_retry(get_all_files_recursive, service, f_q['id'])
-        if files:
-            return {'status': 'pass', 'message': f'{quarter}: {len(files)} file trong subfolder'}
-        return {'status': 'warning', 'message': f'Subfolder {quarter} rong'}
+        count = len(files)
+        if count >= MIN_FILES:
+            return {'status': 'pass', 'message': f'{quarter}: {count} file'}
+        return {'status': 'warning', 'message': f'{quarter}: chi co {count} file (yeu cau toi thieu {MIN_FILES}: xml, bang luong, BCC, HDLD)'}
 
-    # Không có subfolder quý → fallback kiểm tra file trực tiếp trong THU-NHAP-CA-NHAN
+    # Không có subfolder quý → fallback kiểm tra toàn bộ THU-NHAP-CA-NHAN (gộp cả năm)
     files_all = _call_with_retry(get_all_files_recursive, service, tncn_folder_id)
-    if files_all:
-        return {'status': 'pass', 'message': f'{quarter}: {len(files_all)} file (luu truc tiep, khong co subfolder quy)'}
-    return {'status': 'warning', 'message': f'Khong co subfolder {quarter} va folder cha rong'}
+    count = len(files_all)
+    if count >= MIN_FILES:
+        return {'status': 'pass', 'message': f'{quarter}: {count} file (luu chung ca nam, khong co subfolder quy)'}
+    if count == 0:
+        return {'status': 'warning', 'message': f'Khong co subfolder {quarter} va folder THU-NHAP-CA-NHAN rong'}
+    return {'status': 'warning', 'message': f'Khong co subfolder {quarter}, folder chung chi co {count} file (yeu cau toi thieu {MIN_FILES})'}
 
 # ---------------------------------------------------------------------------
 # Ghi DB

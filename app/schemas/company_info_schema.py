@@ -237,3 +237,25 @@ class SeedResult(BaseModel):
     created: int
     updated: int
     errors: list[str]
+
+
+# ---------------------------------------------------------------------------
+# Bulk Import schema
+# ---------------------------------------------------------------------------
+
+class CompanyTaxImportItem(BaseModel):
+    """Schema for importing electronic tax company data"""
+    ma_to_chuc: Optional[str] = None  # Organization code (alternative: ma_kh)
+    ma_kh: Optional[str] = None
+    ten_to_chuc: Optional[str] = None  # Organization name (alternative: ten_cong_ty)
+    ten_cong_ty: Optional[str] = None
+    ma_so_thue: Optional[str] = None  # Tax ID
+    nguoi_phu_trach: Optional[str] = None  # Person in charge (alternative: phu_trach_hien_tai)
+    phu_trach_hien_tai: Optional[str] = None
+
+
+class BulkImportResult(BaseModel):
+    created: int
+    updated: int
+    errors: int
+    error_details: list[str] = []
