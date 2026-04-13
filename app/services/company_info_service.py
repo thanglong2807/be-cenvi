@@ -11,7 +11,7 @@ from app.models.company_info_model import CompanyInfo
 from app.models.employee_model import Employee
 from app.models.folder_model import Folder
 from app.schemas.company_info_schema import CompanyInfoCreate, CompanyInfoUpdate, SeedResult
-from app.services.drive_service import get_drive_service, add_permission
+from app.services.drive_service import get_drive_service, add_permission, find_shortcuts_by_target_id
 from app.services.drive_folder_builder import apply_template
 from app.core.folder_templates import FOLDER_TEMPLATES
 
@@ -93,6 +93,19 @@ class CompanyInfoService:
         manager_employee_id = data.manager_employee_id
         db_data = data.model_dump(exclude={"manager_employee_id"})
 
+        # Nếu chưa có manager_employee_id, tìm từ tên phu_trach_hien_tai
+        employee_folder_id = None
+        if not manager_employee_id and data.phu_trach_hien_tai:
+            employee = self.db.query(Employee).filter(
+                Employee.name == data.phu_trach_hien_tai
+            ).first()
+            if employee:
+                manager_employee_id = employee.id
+                employee_folder_id = employee.drive_folder_id
+                print(f"✅ Tìm thấy nhân viên: {employee.name} (id={employee.id})")
+                if employee_folder_id:
+                    print(f"   Drive folder: {employee_folder_id}")
+
         # Tạo Drive folder nếu có manager_employee_id
         if manager_employee_id and not db_data.get("drive_folder_id"):
             drive_folder_id = self._create_drive_folder(
@@ -100,6 +113,8 @@ class CompanyInfoService:
                 ten_cong_ty=data.ten_cong_ty_viet_tat or data.ten_cong_ty,
                 ma_so_thue=data.ma_so_thue or "",
                 manager_employee_id=manager_employee_id,
+                employee_folder_id=employee_folder_id,
+                employee_name=data.phu_trach_hien_tai,
                 template=data.folder_template or "STANDARD",
                 year=data.folder_year or datetime.now().year,
             )
@@ -122,9 +137,11 @@ class CompanyInfoService:
         manager_employee_id: int,
         template: str,
         year: int,
+        employee_folder_id: Optional[str] = None,
+        employee_name: Optional[str] = None,
     ) -> Optional[str]:
         """
-        Tạo folder Drive cho công ty mới.
+        Tạo folder Drive cho công ty mới và shortcut trong folder nhân viên.
         Trả về folder_id nếu thành công, None nếu lỗi.
         """
         # Lấy email nhân viên từ DB
@@ -146,7 +163,7 @@ class CompanyInfoService:
             # Tên folder: {ma_kh}_{ten_cong_ty}_{ma_so_thue}
             folder_name = f"{ma_kh}_{ten_cong_ty}_{ma_so_thue}"
 
-            # Tạo folder gốc trong Drive
+            # Tạo folder gốc trong Drive (support Shared Drive)
             root_obj = drive.files().create(
                 body={
                     "name": folder_name,
@@ -155,12 +172,44 @@ class CompanyInfoService:
                 },
                 fields="id",
                 supportsAllDrives=True,
+                supportsTeamDrives=True,
             ).execute()
 
             folder_id = root_obj["id"]
 
             # Cấp quyền cho nhân viên phụ trách
             add_permission(drive, folder_id, employee.email, role="fileOrganizer")
+
+            # Tạo shortcut trong folder nhân viên nếu có
+            if employee_folder_id:
+                try:
+                    # Lấy tên folder công ty từ Drive
+                    company_folder = drive.files().get(
+                        fileId=folder_id,
+                        fields='name',
+                        supportsAllDrives=True,
+                        supportsTeamDrives=True
+                    ).execute()
+
+                    shortcut_name = company_folder['name']  # Dùng tên folder công ty
+                    shortcut_metadata = {
+                        'name': shortcut_name,
+                        'mimeType': 'application/vnd.google-apps.shortcut',
+                        'shortcutDetails': {
+                            'targetId': folder_id
+                        },
+                        'parents': [employee_folder_id]
+                    }
+                    shortcut = drive.files().create(
+                        body=shortcut_metadata,
+                        fields='id, name',
+                        supportsAllDrives=True,
+                        supportsTeamDrives=True
+                    ).execute()
+                    print(f"✅ Đã tạo shortcut '{shortcut_name}' trong folder nhân viên")
+                except Exception as e:
+                    print(f"⚠️ Lỗi tạo shortcut (bỏ qua): {str(e)}")
+                    print(f"   Kiểm tra: Folder nhân viên {employee_folder_id} có accessible không?")
 
             # Áp template tạo cấu trúc sub-folders
             current_year = datetime.now().year
@@ -190,6 +239,77 @@ class CompanyInfoService:
                     status_code=409,
                     detail=f"Mã KH '{data.ma_kh}' đã tồn tại (id={existing.id})",
                 )
+
+        # Check nếu nhân viên phụ trách thay đổi
+        old_phu_trach = obj.phu_trach_hien_tai
+        new_phu_trach = data.phu_trach_hien_tai if hasattr(data, 'phu_trach_hien_tai') else None
+
+        if new_phu_trach and new_phu_trach != old_phu_trach and obj.drive_folder_id:
+            try:
+                drive = get_drive_service()
+
+                # Lấy tên folder công ty
+                company_folder = drive.files().get(
+                    fileId=obj.drive_folder_id,
+                    fields='name',
+                    supportsAllDrives=True,
+                    supportsTeamDrives=True
+                ).execute()
+                shortcut_name = company_folder['name']
+
+                # Xoá shortcut từ folder nhân viên cũ
+                if old_phu_trach:
+                    old_employee = self.db.query(Employee).filter(
+                        Employee.name == old_phu_trach
+                    ).first()
+
+                    if old_employee and old_employee.drive_folder_id:
+                        # Tìm shortcut bằng targetId thay vì tên
+                        shortcut_ids = find_shortcuts_by_target_id(
+                            drive,
+                            old_employee.drive_folder_id,
+                            obj.drive_folder_id
+                        )
+
+                        for shortcut_id in shortcut_ids:
+                            drive.files().delete(
+                                fileId=shortcut_id,
+                                supportsAllDrives=True,
+                                supportsTeamDrives=True
+                            ).execute()
+
+                        if shortcut_ids:
+                            print(f"✅ Xoá shortcut từ folder nhân viên cũ: {old_phu_trach}")
+                        else:
+                            print(f"⏭️  Không tìm thấy shortcut ở nhân viên cũ: {old_phu_trach}")
+
+                # Thêm shortcut vào folder nhân viên mới
+                new_employee = self.db.query(Employee).filter(
+                    Employee.name == new_phu_trach
+                ).first()
+
+                if new_employee and new_employee.drive_folder_id:
+                    shortcut_metadata = {
+                        'name': shortcut_name,
+                        'mimeType': 'application/vnd.google-apps.shortcut',
+                        'shortcutDetails': {
+                            'targetId': obj.drive_folder_id
+                        },
+                        'parents': [new_employee.drive_folder_id]
+                    }
+
+                    shortcut = drive.files().create(
+                        body=shortcut_metadata,
+                        fields='id, name',
+                        supportsAllDrives=True,
+                        supportsTeamDrives=True
+                    ).execute()
+                    print(f"✅ Thêm shortcut vào folder nhân viên mới: {new_phu_trach}")
+
+            except Exception as e:
+                print(f"⚠️ Lỗi cập nhật shortcut: {e}")
+
+        # Update fields
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(obj, field, value)
         obj.updated_at = datetime.now()
@@ -197,10 +317,152 @@ class CompanyInfoService:
         self.db.refresh(obj)
         return self._enrich(obj)
 
-    def delete(self, company_id: int) -> None:
+    def delete(self, company_id: int, delete_drive_folder: bool = True) -> dict:
+        """
+        Xoá công ty từ database và tuỳ chọn xoá folder + shortcut trong Google Drive.
+
+        Args:
+            company_id: Company ID
+            delete_drive_folder: Có xoá folder Drive không? (default: True)
+
+        Returns:
+            dict: Result with status
+        """
         obj = self._get_or_404(company_id)
+        ma_kh = obj.ma_kh
+        drive_folder_id = obj.drive_folder_id
+        phu_trach = obj.phu_trach_hien_tai
+
+        shortcut_deleted = False
+
+        # Xoá shortcut trong folder nhân viên
+        if delete_drive_folder and phu_trach and drive_folder_id:
+            try:
+                # Tìm employee folder ID
+                employee = self.db.query(Employee).filter(
+                    Employee.name == phu_trach
+                ).first()
+
+                if employee and employee.drive_folder_id:
+                    try:
+                        drive = get_drive_service()
+
+                        # Tìm shortcut bằng targetId (tránh vấn đề ký tự đặc biệt)
+                        shortcut_ids = find_shortcuts_by_target_id(
+                            drive,
+                            employee.drive_folder_id,
+                            drive_folder_id
+                        )
+
+                        # Xoá tất cả shortcut pointing tới company folder này
+                        for shortcut_id in shortcut_ids:
+                            drive.files().delete(
+                                fileId=shortcut_id,
+                                supportsAllDrives=True,
+                                supportsTeamDrives=True
+                            ).execute()
+                            print(f"✅ Xoá shortcut '{shortcut_id}' từ folder nhân viên")
+                            shortcut_deleted = True
+
+                        if not shortcut_ids:
+                            print(f"⏭️  Không tìm thấy shortcut trong folder nhân viên {employee.name}")
+
+                    except Exception as e:
+                        print(f"⚠️ Lỗi xoá shortcut: {e}")
+
+            except Exception as e:
+                print(f"⚠️ Lỗi khi tìm employee: {e}")
+
+        # Xoá folder Drive nếu có
+        if delete_drive_folder and drive_folder_id:
+            try:
+                drive = get_drive_service()
+                drive.files().delete(
+                    fileId=drive_folder_id,
+                    supportsAllDrives=True,
+                    supportsTeamDrives=True
+                ).execute()
+                print(f"✅ Xoá Drive folder thành công: {drive_folder_id}")
+            except Exception as e:
+                print(f"⚠️ Lỗi xoá Drive folder: {e}")
+
+        # Xoá từ database
         self.db.delete(obj)
         self.db.commit()
+
+        return {
+            'status': 'success',
+            'message': f"✅ Xoá công ty '{ma_kh}' thành công",
+            'ma_kh': ma_kh,
+            'drive_folder_deleted': delete_drive_folder and bool(drive_folder_id),
+            'shortcut_deleted': shortcut_deleted
+        }
+
+    def add_shortcut_to_employee_folder(self, ma_kh: str, employee_id: int) -> dict:
+        """
+        Thêm shortcut công ty vào folder nhân viên
+
+        Args:
+            ma_kh: Company code
+            employee_id: Employee ID
+
+        Returns:
+            dict: Result with status
+        """
+        # Get company
+        company = self.get_by_ma_kh(ma_kh)
+        if not company:
+            raise HTTPException(status_code=404, detail=f"Công ty '{ma_kh}' không tồn tại")
+
+        if not company.drive_folder_id:
+            raise HTTPException(status_code=400, detail=f"Công ty '{ma_kh}' chưa có Drive folder")
+
+        # Get employee
+        employee = self.db.query(Employee).filter(Employee.id == employee_id).first()
+        if not employee:
+            raise HTTPException(status_code=404, detail=f"Nhân viên id={employee_id} không tồn tại")
+
+        if not employee.drive_folder_id:
+            raise HTTPException(status_code=400, detail=f"Nhân viên '{employee.name}' chưa có Drive folder")
+
+        try:
+            drive = get_drive_service()
+
+            # Lấy tên folder công ty từ Drive
+            company_folder = drive.files().get(
+                fileId=company.drive_folder_id,
+                fields='name',
+                supportsAllDrives=True,
+                supportsTeamDrives=True
+            ).execute()
+
+            shortcut_name = company_folder['name']  # Dùng tên thật của folder
+            shortcut_metadata = {
+                'name': shortcut_name,
+                'mimeType': 'application/vnd.google-apps.shortcut',
+                'shortcutDetails': {
+                    'targetId': company.drive_folder_id
+                },
+                'parents': [employee.drive_folder_id]
+            }
+
+            shortcut = drive.files().create(
+                body=shortcut_metadata,
+                fields='id, name',
+                supportsAllDrives=True,
+                supportsTeamDrives=True
+            ).execute()
+
+            return {
+                'status': 'success',
+                'message': f"✅ Tạo shortcut '{shortcut_name}' thành công",
+                'shortcut_id': shortcut['id'],
+                'shortcut_name': shortcut['name']
+            }
+
+        except Exception as e:
+            print(f"❌ Lỗi tạo shortcut: {e}")
+            raise HTTPException(status_code=500, detail=f"Lỗi tạo shortcut: {str(e)}")
 
     # ------------------------------------------------------------------
     # SEED từ folders.json

@@ -42,8 +42,31 @@ class EmployeeService:
     def create(self, data: EmployeeCreate) -> Employee:
         if self.get_by_email(data.email):
             raise HTTPException(status_code=409, detail="Email nhân viên đã tồn tại")
+
         now = datetime.now()
         obj = Employee(**data.model_dump(), created_at=now, updated_at=now)
+
+        # Tạo folder employee trong Google Drive (nếu chưa có)
+        if not obj.drive_folder_id:
+            try:
+                from app.services.employee_folder_service import EmployeeFolderService
+                import os
+
+                folder_service = EmployeeFolderService()
+                parent_folder_id = os.getenv('EMPLOYEES_ROOT_FOLDER_ID', '0AIxlO0tI8hPBUk9PVA')
+
+                folder_id = folder_service.create_employee_folder(
+                    employee_name=obj.name,
+                    parent_folder_id=parent_folder_id
+                )
+
+                if folder_id:
+                    obj.drive_folder_id = folder_id
+                    print(f"✅ Tạo Drive folder cho nhân viên '{obj.name}': {folder_id}")
+
+            except Exception as e:
+                print(f"⚠️ Lỗi tạo Drive folder cho nhân viên: {e}")
+
         self.db.add(obj)
         self.db.commit()
         self.db.refresh(obj)

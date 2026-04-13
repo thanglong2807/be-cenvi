@@ -8,6 +8,7 @@ class EmployeeCreate(BaseModel):
     title: Optional[str] = None
     email: EmailStr
     status: str = "active"
+    drive_folder_id: Optional[str] = None  # Google Drive folder ID
 
 
 class EmployeeUpdate(BaseModel):
@@ -15,6 +16,7 @@ class EmployeeUpdate(BaseModel):
     title: Optional[str] = None
     email: Optional[EmailStr] = None
     status: Optional[str] = None
+    drive_folder_id: Optional[str] = None  # Google Drive folder ID
 
 
 class EmployeeResponse(BaseModel):
@@ -23,6 +25,7 @@ class EmployeeResponse(BaseModel):
     title: Optional[str] = None
     email: Optional[str] = None
     status: Optional[str] = None
+    drive_folder_id: Optional[str] = None  # Google Drive folder ID
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

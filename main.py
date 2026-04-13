@@ -10,11 +10,12 @@ from pathlib import Path
 from app.api.v1.employees import router as employee_router
 from app.api.v1.folders import router as folder_router
 from app.api.v1.audit import router as audit_router
-from app.api.v1.migration import router as migration_router 
+from app.api.v1.migration import router as migration_router
 from app.api.v1.document_api import router as document_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.work_links import router as work_link_router
 from app.api.v1.company_info import router as company_info_router
+from app.api.v1.sync import router as sync_router
 
 # Import Database
 from app.core.database import engine
@@ -121,12 +122,13 @@ def api_home_page():
 
 app.include_router(employee_router, prefix="/api/v1")
 app.include_router(folder_router, prefix="/api/v1")
-app.include_router(migration_router, prefix="/api/v1") 
+app.include_router(migration_router, prefix="/api/v1")
 app.include_router(audit_router, prefix="/api/v1")
 app.include_router(document_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(work_link_router, prefix="/api/v1")
 app.include_router(company_info_router, prefix="/api/v1")
+app.include_router(sync_router, prefix="/api/v1")
 
 # =========================
 # 4. SERVE STATIC FILES (Dashboard HTML)

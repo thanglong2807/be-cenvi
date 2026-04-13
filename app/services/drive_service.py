@@ -37,6 +37,7 @@ def browse_drive_folder(drive_folder_id: str):
             orderBy="folder, name",
             pageSize=1000,
             supportsAllDrives=True,
+            supportsTeamDrives=True,
             includeItemsFromAllDrives=True
         ).execute()
         
@@ -55,6 +56,7 @@ def get_drive_permissions(service, file_id: str):
             fileId=file_id,
             fields="permissions(id, displayName, emailAddress, role, type)",
             supportsAllDrives=True,
+            supportsTeamDrives=True,
             useDomainAdminAccess=False 
         ).execute()
         
@@ -104,6 +106,7 @@ def find_child_folder_by_name_contain(service, parent_id, name_part):
             q=query,
             fields="files(id, name)",
             supportsAllDrives=True,
+            supportsTeamDrives=True,
             includeItemsFromAllDrives=True
         ).execute()
         files = results.get('files', [])
@@ -128,6 +131,7 @@ def find_child_folder_exact(service, parent_id, exact_name):
             q=query,
             fields="files(id, name)",
             supportsAllDrives=True,
+            supportsTeamDrives=True,
             includeItemsFromAllDrives=True
         ).execute()
         files = results.get('files', [])
@@ -150,6 +154,7 @@ def add_permission(service, file_id, email, role="fileOrganizer"):
                 "emailAddress": email
             },
             supportsAllDrives=True,
+            supportsTeamDrives=True,
             sendNotificationEmail=False
         ).execute()
         return True
@@ -184,7 +189,7 @@ def remove_permission_by_email(service, file_id, email):
 
 def create_drive_shortcut(service, target_id, parent_id, name):
     """
-    Tạo shortcut trỏ đến target_id, đặt trong parent_id
+    Tạo shortcut trỏ đến target_id, đặt trong parent_id (support Shared Drive)
     """
     try:
         service.files().create(
@@ -194,7 +199,8 @@ def create_drive_shortcut(service, target_id, parent_id, name):
                 "parents": [parent_id],
                 "shortcutDetails": {"targetId": target_id}
             },
-            supportsAllDrives=True
+            supportsAllDrives=True,
+            supportsTeamDrives=True
         ).execute()
     except Exception as e:
         print(f"Lỗi tạo shortcut: {e}")
@@ -235,6 +241,7 @@ def list_drive_subfolders(service, parent_id):
                 fields='nextPageToken, files(id, name, webViewLink)',
                 pageToken=page_token,
                 supportsAllDrives=True,
+            supportsTeamDrives=True,
                 includeItemsFromAllDrives=True,
                 pageSize=1000
             ).execute()
@@ -248,6 +255,48 @@ def list_drive_subfolders(service, parent_id):
             break
     return folders
 
+
+
+def find_shortcuts_by_target_id(service, parent_id, target_id):
+    """
+    Tìm tất cả shortcut trong folder parent_id có pointing tới target_id.
+    Trả về list của shortcut IDs.
+
+    Args:
+        service: Google Drive service
+        parent_id: Folder ID để tìm shortcut
+        target_id: Target folder ID mà shortcut pointing tới
+
+    Returns:
+        List của shortcut IDs
+    """
+    shortcut_ids = []
+    try:
+        # List tất cả shortcut trong folder
+        query = (
+            f"'{parent_id}' in parents "
+            "and mimeType = 'application/vnd.google-apps.shortcut' "
+            "and trashed = false"
+        )
+        results = service.files().list(
+            q=query,
+            spaces='drive',
+            fields='files(id, shortcutDetails)',
+            pageSize=1000,
+            supportsAllDrives=True,
+            supportsTeamDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute()
+
+        files = results.get('files', [])
+        for f in files:
+            shortcut_details = f.get('shortcutDetails', {})
+            if shortcut_details.get('targetId') == target_id:
+                shortcut_ids.append(f['id'])
+    except Exception as e:
+        print(f"Lỗi find_shortcuts_by_target_id: {e}")
+
+    return shortcut_ids
 
 
 def get_all_files_recursive(service, parent_id, include_extended_fields=True):
@@ -267,6 +316,7 @@ def get_all_files_recursive(service, parent_id, include_extended_fields=True):
                 q=f"'{parent_id}' in parents and trashed = false",
                 fields=f"nextPageToken, {file_fields}",
                 supportsAllDrives=True,
+            supportsTeamDrives=True,
                 includeItemsFromAllDrives=True,
                 pageSize=1000,
                 pageToken=page_token

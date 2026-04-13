@@ -76,13 +76,19 @@ def update_company(
 # ---------------------------------------------------------------------------
 # DELETE /company-info/{id}
 # ---------------------------------------------------------------------------
-@router.delete("/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{company_id}", status_code=status.HTTP_200_OK)
 def delete_company(
     company_id: int,
+    delete_drive_folder: bool = Query(True, description="Có xoá folder Google Drive không?"),
     service: CompanyInfoService = Depends(get_service),
 ):
-    service.delete(company_id)
-    return None
+    """
+    Xoá công ty từ database.
+
+    Query params:
+    - delete_drive_folder: Có xoá folder Google Drive không? (default: True)
+    """
+    return service.delete(company_id, delete_drive_folder=delete_drive_folder)
 
 
 # ---------------------------------------------------------------------------
@@ -124,3 +130,26 @@ def bulk_import_companies(
     """
     companies_data = [c.model_dump() for c in companies]
     return service.bulk_import_tax_companies(companies_data)
+
+
+# ---------------------------------------------------------------------------
+# POST /company-info/{ma_kh}/add-shortcut
+# Thêm shortcut công ty vào folder nhân viên
+# ---------------------------------------------------------------------------
+@router.post(
+    "/{ma_kh}/add-shortcut",
+    status_code=status.HTTP_200_OK,
+    summary="Thêm shortcut công ty vào folder nhân viên",
+)
+def add_company_shortcut(
+    ma_kh: str,
+    employee_id: int = Query(..., description="Employee ID"),
+    service: CompanyInfoService = Depends(get_service),
+):
+    """
+    Thêm shortcut của công ty vào folder nhân viên.
+
+    - ma_kh: Mã công ty
+    - employee_id: ID của nhân viên
+    """
+    return service.add_shortcut_to_employee_folder(ma_kh, employee_id)
