@@ -48,10 +48,22 @@ Desktop.ini
 # ==================================
 *.log
 *.sqlite
+*.db
 logs/
 dist/
 backups/
 *.tar
 *.rar
 *.zip
-centvi_audit.db
+
+# ==================================
+# 7. DATA FILES (Không commit dữ liệu thô)
+# ==================================
+*.tsv
+*.xlsx
+*.xls
+SEND_TO_FRONTEND.txt
+drive_folder_update_list.tsv
+token.pickle
+scripts/token.pickle
+scripts/data_output_managers.json

@@ -1,0 +1,390 @@
+{
+  "info": {
+    "name": "Cenvi Contract Template API",
+    "description": "API for managing contract templates and contracts",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Contract Types",
+      "item": [
+        {
+          "name": "List Contract Types",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/types",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "types"]
+            }
+          }
+        },
+        {
+          "name": "Create Contract Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/types",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "types"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hop Dong Dich Vu Ke Toan\",\n  \"description\": \"Service contract for accounting\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contract Templates",
+      "item": [
+        {
+          "name": "List Templates",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/templates",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "templates"]
+            }
+          }
+        },
+        {
+          "name": "Get Template Detail",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/templates/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "templates", "1"]
+            }
+          }
+        },
+        {
+          "name": "Create Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/templates",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "templates"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mau HD Dich Vu Ke Toan v1\",\n  \"contract_type_id\": 1,\n  \"content\": \"HOP DONG DICH VU KE TOAN\\n\\nBen A: {{ten_cong_ty}}\\nMa So Thue: {{ma_so_thue}}\\n\\nThoi han: {{duration_months}} thang\\nSo tien: {{payment_amount}} VND\",\n  \"fields\": [\n    {\n      \"field_name\": \"duration_months\",\n      \"field_label\": \"Thoi gian hop dong (thang)\",\n      \"field_type\": \"number\",\n      \"source\": \"custom\",\n      \"is_required\": true,\n      \"display_order\": 0\n    },\n    {\n      \"field_name\": \"payment_amount\",\n      \"field_label\": \"So tien thanh toan\",\n      \"field_type\": \"currency\",\n      \"source\": \"custom\",\n      \"is_required\": true,\n      \"display_order\": 1\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Template (Create New Version)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/templates/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "templates", "1"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mau HD Dich Vu Ke Toan v2\",\n  \"content\": \"Updated content here...\",\n  \"fields\": []\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Template Fields",
+      "item": [
+        {
+          "name": "Get Template Fields",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/templates/1/fields",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "templates", "1", "fields"]
+            }
+          }
+        },
+        {
+          "name": "Add Field to Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/templates/1/fields",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "templates", "1", "fields"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"field_name\": \"new_field\",\n  \"field_label\": \"New Field Label\",\n  \"field_type\": \"text\",\n  \"source\": \"custom\",\n  \"is_required\": false,\n  \"display_order\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "Reorder Fields",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/templates/1/fields/reorder",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "templates", "1", "fields", "reorder"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"field_ids\": [3, 1, 2]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Company Info Fields",
+      "item": [
+        {
+          "name": "Get Company Info Fields",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/company-info-fields",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "company-info-fields"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contracts",
+      "item": [
+        {
+          "name": "List Contracts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts"]
+            }
+          }
+        },
+        {
+          "name": "Get Contract",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "1"]
+            }
+          }
+        },
+        {
+          "name": "Create Contract",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"HD Dich Vu KT - Cong Ty ABC\",\n  \"template_id\": 1,\n  \"partner_company_id\": null,\n  \"partner_name\": \"Cong Ty ABC Limited\",\n  \"partner_address\": \"123 Nguyen Hue, HCMC\",\n  \"partner_tax_id\": \"0123456789\",\n  \"partner_representative\": \"Ong Nguyen Van A\",\n  \"partner_position\": \"Giam doc\",\n  \"field_values\": {\n    \"duration_months\": 12,\n    \"payment_amount\": 50000000\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Contract",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "1"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Title\",\n  \"field_values\": {\n    \"duration_months\": 24\n  },\n  \"status\": \"final\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Contract Preview (HTML)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/1/preview",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "1", "preview"]
+            }
+          }
+        },
+        {
+          "name": "Download Contract PDF",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/1/pdf",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "1", "pdf"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contract Partners",
+      "item": [
+        {
+          "name": "List Partners",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/partners",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "partners"]
+            }
+          }
+        },
+        {
+          "name": "Create Partner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/partners",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "partners"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cong Ty XYZ Limited\",\n  \"address\": \"456 Le Loi, HN\",\n  \"tax_id\": \"9876543210\",\n  \"representative\": \"Chu Tich Board\",\n  \"position\": \"CEO\",\n  \"phone\": \"0987654321\",\n  \"email\": \"ceo@xyz.com\",\n  \"notes\": \"New long-term partner\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Partner",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/partners/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "partners", "1"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0987654322\",\n  \"notes\": \"Updated contact info\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Partner",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "http://localhost:8100/api/v1/contracts/partners/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8100",
+              "path": ["api", "v1", "contracts", "partners", "1"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

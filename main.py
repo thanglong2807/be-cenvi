@@ -16,11 +16,12 @@ from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.work_links import router as work_link_router
 from app.api.v1.company_info import router as company_info_router
 from app.api.v1.sync import router as sync_router
+from app.api.v1.contracts import router as contract_router
 
 # Import Database
 from app.core.database import engine
 # Import Models để tạo bảng
-from app.models import audit, document_model, work_link_model, company_info_model, employee_model, folder_model
+from app.models import audit, document_model, work_link_model, company_info_model, employee_model, folder_model, contract_model
 
 # Import Services
 from app.services.dashboard_sheet_service import dashboard_service
@@ -38,8 +39,8 @@ async def poll_sheet_updates():
     Background task chạy định kỳ để kiểm tra Google Sheet
     Nếu có thay đổi, broadcast tới tất cả clients WebSocket
     """
-    print("🚀 Bắt đầu polling Google Sheet...")
-    
+    print("[START] Bat dau polling Google Sheet...")
+
     while True:
         try:
             if not _can_poll_sheet():
@@ -47,16 +48,16 @@ async def poll_sheet_updates():
                 continue
             # Lấy dữ liệu mới từ Sheet (để None để dùng default từ config)
             new_data = dashboard_service.fetch_data()
-            
+
             if new_data and dashboard_service.has_changed(new_data):
-                print(f"📢 Phát hiện thay đổi, broadcast tới clients...")
+                print("[BROADCAST] Phat hien thay doi, broadcast toi clients...")
                 await broadcast_sheet_update(new_data)
-            
+
             # Chờ trước khi check lần tiếp theo
             await asyncio.sleep(settings.SHEET_POLLING_INTERVAL)
-            
+
         except Exception as e:
-            print(f"❌ Lỗi polling sheet: {e}")
+            print(f"[ERROR] Loi polling sheet: {e}")
             await asyncio.sleep(5)  # Retry sau 5s nếu lỗi
 
 
@@ -70,16 +71,16 @@ async def lifespan(app: FastAPI):
     task = None
     if _can_poll_sheet():
         task = asyncio.create_task(poll_sheet_updates())
-        print("✅ Background polling task khởi động")
+        print("[OK] Background polling task khoi dong")
     else:
-        print("⚠️ Bỏ qua polling Google Sheet (thiếu env GOOGLE_SERVICE_ACCOUNT_FILE/ROOT_DRIVE_FOLDER_ID/GOOGLE_SHEET_ID)")
-    
+        print("[SKIP] Bo qua polling Google Sheet (thieu env GOOGLE_SERVICE_ACCOUNT_FILE/ROOT_DRIVE_FOLDER_ID/GOOGLE_SHEET_ID)")
+
     yield
-    
+
     # Shutdown
     if task:
         task.cancel()
-        print("🛑 Background polling task dừng")
+        print("[STOP] Background polling task dung")
 
 
 app = FastAPI(
@@ -96,6 +97,7 @@ document_model.Base.metadata.create_all(bind=engine)
 work_link_model.Base.metadata.create_all(bind=engine)
 company_info_model.Base.metadata.create_all(bind=engine)
 employee_model.Base.metadata.create_all(bind=engine)
+contract_model.Base.metadata.create_all(bind=engine)
 
 # =========================
 # 1. CẤU HÌNH CORS
@@ -107,6 +109,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# =========================
+# 1.5. MOUNT STATIC FILES
+# =========================
+Path("static").mkdir(exist_ok=True)
+Path("static/contracts").mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # =========================
 # 2. KHÔNG DÙNG SEED DATA NỮA
@@ -129,6 +138,7 @@ app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(work_link_router, prefix="/api/v1")
 app.include_router(company_info_router, prefix="/api/v1")
 app.include_router(sync_router, prefix="/api/v1")
+app.include_router(contract_router, prefix="/api/v1")
 
 # =========================
 # 4. SERVE STATIC FILES (Dashboard HTML)
