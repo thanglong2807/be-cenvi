@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
@@ -22,7 +23,7 @@ class ContractTemplate(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(200), nullable=False)
     contract_type_id = Column(Integer, ForeignKey("CONTRACT_TYPES.id"), nullable=False)
-    content = Column(Text, nullable=False)  # Template content with {{variables}}
+    content = Column(LONGTEXT, nullable=False)  # Template content with {{variables}}
     version = Column(Integer, default=1, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_by = Column(String(200), nullable=False)
@@ -53,14 +54,14 @@ class Contract(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     title = Column(String(300), nullable=False)
     template_id = Column(Integer, ForeignKey("CONTRACT_TEMPLATES.id"), nullable=False)
-    template_snapshot = Column(Text, nullable=False)  # JSON snapshot of template + fields at creation
+    template_snapshot = Column(LONGTEXT, nullable=False)  # JSON snapshot of template + fields at creation
     partner_company_id = Column(Integer, nullable=True)  # FK to COMPANY_INFO (optional)
     partner_name = Column(String(300), nullable=False)
     partner_address = Column(Text, nullable=True)
     partner_tax_id = Column(String(50), nullable=True)
     partner_representative = Column(String(200), nullable=True)
     partner_position = Column(String(200), nullable=True)
-    field_values = Column(Text, nullable=False)  # JSON of {field_name: value}
+    field_values = Column(LONGTEXT, nullable=False)  # JSON of {field_name: value}
     status = Column(String(20), default="draft", nullable=False)  # draft, final
     pdf_path = Column(String(500), nullable=True)
     created_by = Column(String(200), nullable=False)
