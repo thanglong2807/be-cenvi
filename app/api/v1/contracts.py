@@ -1,6 +1,6 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, status
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 from sqlalchemy.orm import Session
 import json
 
@@ -33,6 +33,7 @@ from app.services.contract_service import (
     CompanyInfoFieldsService,
 )
 from app.services.contract_pdf_service import ContractPDFService
+from app.services.contract_word_service import ContractWordService, has_docx_template
 
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
@@ -110,7 +111,13 @@ def list_contract_templates(
     service: ContractTemplateService = Depends(get_contract_template_service),
 ):
     """Get all active contract templates"""
-    return service.get_all(type_id=type_id)
+    templates = service.get_all(type_id=type_id)
+    result = []
+    for t in templates:
+        d = ContractTemplateListItem.model_validate(t)
+        d.has_docx_template = has_docx_template(t.id)
+        result.append(d)
+    return result
 
 
 @router.get("/templates/{template_id}", response_model=ContractTemplateResponse)
@@ -133,6 +140,7 @@ def get_contract_template(
         "created_at": template.created_at,
         "updated_at": template.updated_at,
         "fields": fields,
+        "has_docx_template": has_docx_template(template_id),
     }
     return ContractTemplateResponse(**template_dict)
 
@@ -192,6 +200,40 @@ def delete_contract_template(
 ):
     """Delete contract template (admin only)"""
     return service.soft_delete(template_id)
+
+
+# =========================
+# Template Word File Endpoints
+# =========================
+@router.post("/templates/{template_id}/docx", status_code=status.HTTP_200_OK)
+async def upload_template_docx(
+    template_id: int,
+    file: UploadFile = File(...),
+):
+    """Upload a .docx file as the Word template for this contract template"""
+    if not file.filename.endswith(".docx"):
+        raise HTTPException(status_code=400, detail="Chỉ chấp nhận file .docx")
+    content = await file.read()
+    ContractWordService.save_template_file(template_id, content)
+    return {"message": f"Đã upload Word template cho template ID {template_id}"}
+
+
+@router.get("/templates/{template_id}/docx")
+def download_template_docx(template_id: int):
+    """Download the .docx template file"""
+    content = ContractWordService.get_template_file(template_id)
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="template_{template_id}.docx"'},
+    )
+
+
+@router.delete("/templates/{template_id}/docx", status_code=status.HTTP_200_OK)
+def delete_template_docx(template_id: int):
+    """Delete the .docx template file"""
+    ContractWordService.delete_template_file(template_id)
+    return {"message": "Đã xóa Word template"}
 
 
 # =========================
@@ -326,6 +368,27 @@ def download_contract_pdf(
         )
     except Exception as e:
         return {"error": str(e)}
+
+
+@router.get("/{contract_id}/word")
+def download_contract_word(
+    contract_id: int,
+    db: Session = Depends(get_db),
+):
+    """Download contract as Word (.docx)"""
+    word_service = ContractWordService()
+    try:
+        buf = word_service.generate_word_bytes(contract_id, db)
+        filename = f"contract_{contract_id}.docx"
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{contract_id}/preview")

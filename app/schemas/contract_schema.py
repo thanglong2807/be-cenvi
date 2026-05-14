@@ -98,6 +98,7 @@ class ContractTemplateListItem(BaseModel):
     contract_type_id: int
     version: int
     is_active: bool
+    has_docx_template: bool = False
     created_at: datetime
 
     class Config:
@@ -113,6 +114,7 @@ class ContractTemplateResponse(BaseModel):
     is_active: bool
     created_by: str
     fields: List[TemplateFieldResponse] = []
+    has_docx_template: bool = False
     created_at: datetime
     updated_at: datetime
 
