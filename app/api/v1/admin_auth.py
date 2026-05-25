@@ -1,11 +1,11 @@
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Form
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, status, Form, Header
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import verify_password, hash_password, create_access_token, create_refresh_token
+from app.core.security import verify_password, hash_password, create_access_token, create_refresh_token, decode_token
 from app.models.admin_user_model import AdminUser
 from app.models.employee_model import Employee
 from app.schemas.auth_schema import TokenResponse, UserOut, AdminCreate
@@ -166,3 +166,77 @@ def seed_accounts_from_employees(db: Session = Depends(get_db)):
         skipped_no_email=skipped_no_email,
         errors=errors,
     )
+
+
+# ─── Helper: lấy user từ Authorization header ────────────────────────────────
+def _get_current_user(authorization: Optional[str], db: Session) -> AdminUser:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Chưa đăng nhập")
+    token = authorization.split(" ", 1)[1]
+    payload = decode_token(token)
+    if not payload:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token không hợp lệ hoặc đã hết hạn")
+    user = db.query(AdminUser).filter(AdminUser.id == int(payload["sub"])).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy tài khoản")
+    return user
+
+
+# ─── GET /me ─────────────────────────────────────────────────────────────────
+@router.get("/me", response_model=UserOut)
+def get_me(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    user = _get_current_user(authorization, db)
+    return _to_user_out(user)
+
+
+# ─── PUT /me ─────────────────────────────────────────────────────────────────
+class ProfileUpdate(BaseModel):
+    display_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+
+@router.put("/me", response_model=UserOut)
+def update_me(
+    payload: ProfileUpdate,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    user = _get_current_user(authorization, db)
+
+    if payload.display_name is not None:
+        user.display_name = payload.display_name.strip() or user.display_name
+    if payload.email is not None:
+        existing = db.query(AdminUser).filter(
+            AdminUser.email == payload.email, AdminUser.id != user.id
+        ).first()
+        if existing:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email đã được dùng bởi tài khoản khác")
+        user.email = payload.email
+
+    db.commit()
+    db.refresh(user)
+    return _to_user_out(user)
+
+
+# ─── PUT /me/password ────────────────────────────────────────────────────────
+class PasswordChange(BaseModel):
+    old_password: str
+    new_password: str
+
+
+@router.put("/me/password")
+def change_password(
+    payload: PasswordChange,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    user = _get_current_user(authorization, db)
+
+    if not verify_password(payload.old_password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mật khẩu hiện tại không đúng")
+    if len(payload.new_password) < 6:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mật khẩu mới phải có ít nhất 6 ký tự")
+
+    user.password_hash = hash_password(payload.new_password)
+    db.commit()
+    return {"message": "Đổi mật khẩu thành công"}
