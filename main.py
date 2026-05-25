@@ -17,11 +17,12 @@ from app.api.v1.work_links import router as work_link_router
 from app.api.v1.company_info import router as company_info_router
 from app.api.v1.sync import router as sync_router
 from app.api.v1.contracts import router as contract_router
+from app.api.v1.admin_auth import router as admin_auth_router
 
 # Import Database
 from app.core.database import engine
 # Import Models để tạo bảng
-from app.models import audit, document_model, work_link_model, company_info_model, employee_model, folder_model, contract_model
+from app.models import audit, document_model, work_link_model, company_info_model, employee_model, folder_model, contract_model, admin_user_model
 
 # Import Services
 from app.services.dashboard_sheet_service import dashboard_service
@@ -98,6 +99,7 @@ work_link_model.Base.metadata.create_all(bind=engine)
 company_info_model.Base.metadata.create_all(bind=engine)
 employee_model.Base.metadata.create_all(bind=engine)
 contract_model.Base.metadata.create_all(bind=engine)
+admin_user_model.Base.metadata.create_all(bind=engine)
 
 # =========================
 # 1. CẤU HÌNH CORS
@@ -139,6 +141,7 @@ app.include_router(work_link_router, prefix="/api/v1")
 app.include_router(company_info_router, prefix="/api/v1")
 app.include_router(sync_router, prefix="/api/v1")
 app.include_router(contract_router, prefix="/api/v1")
+app.include_router(admin_auth_router, prefix="/api/v1")
 
 # =========================
 # 4. SERVE STATIC FILES (Dashboard HTML)

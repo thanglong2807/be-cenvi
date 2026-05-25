@@ -8,9 +8,13 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.employee_model import Employee
+from app.models.admin_user_model import AdminUser
+from app.core.security import hash_password
 from app.schemas.employee_schema import EmployeeCreate, EmployeeUpdate, SeedEmployeeResult
 from app.db.repositories.folder_repo import FolderRepository
 from app.services.drive_service import get_drive_service, add_permission, remove_permission_by_email
+
+DEFAULT_EMPLOYEE_PASSWORD = "Cenvi@123"
 
 EMPLOYEES_JSON = "app/data/employees.json"
 folder_repo = FolderRepository()
@@ -68,6 +72,20 @@ class EmployeeService:
                 print(f"⚠️ Lỗi tạo Drive folder cho nhân viên: {e}")
 
         self.db.add(obj)
+        self.db.flush()  # lấy obj.id trước khi commit
+
+        # Tạo tài khoản đăng nhập cho nhân viên (username = email, pass = Cenvi@123)
+        username = data.email.strip().lower()
+        if not self.db.query(AdminUser).filter(AdminUser.username == username).first():
+            account = AdminUser(
+                username=username,
+                password_hash=hash_password(DEFAULT_EMPLOYEE_PASSWORD),
+                display_name=obj.name or username,
+                email=obj.email,
+                role="USER",
+            )
+            self.db.add(account)
+
         self.db.commit()
         self.db.refresh(obj)
         return obj

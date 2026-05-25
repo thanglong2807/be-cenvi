@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     STORAGE_PATH: str = os.path.join("app", "data", "companies_storage.json")
     
     DOCKER: bool = False  # Biến này sẽ được set khi chạy trong Docker, có thể dùng để điều chỉnh đường dẫn nếu cần
+
+    # --- 7. JWT AUTH ---
+    SECRET_KEY: str = "cenvi-super-secret-key-change-in-production-2025"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     # --- 6. CẦU NỐI (ALIAS) CHO CODE MỚI ---
     @property
     def CREDENTIALS_PATH(self) -> str:
