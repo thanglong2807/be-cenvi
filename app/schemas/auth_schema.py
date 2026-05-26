@@ -14,6 +14,8 @@ class UserOut(BaseModel):
     email: Optional[str] = None
     role: str
     roles: List[str]
+    is_active: Optional[bool] = True
+    employee_id: Optional[int] = None
 
     class Config:
         from_attributes = True

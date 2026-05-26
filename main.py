@@ -101,6 +101,15 @@ employee_model.Base.metadata.create_all(bind=engine)
 contract_model.Base.metadata.create_all(bind=engine)
 admin_user_model.Base.metadata.create_all(bind=engine)
 
+# Migration: thêm cột employee_id nếu chưa có
+from sqlalchemy import text as _text
+with engine.connect() as _conn:
+    try:
+        _conn.execute(_text("ALTER TABLE admin_users ADD COLUMN employee_id INT NULL DEFAULT NULL"))
+        _conn.commit()
+    except Exception:
+        pass  # Cột đã tồn tại
+
 # =========================
 # 1. CẤU HÌNH CORS
 # =========================

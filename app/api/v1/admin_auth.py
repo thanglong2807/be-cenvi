@@ -21,6 +21,8 @@ def _to_user_out(user: AdminUser) -> UserOut:
         email=user.email,
         role=user.role,
         roles=[user.role],
+        is_active=user.is_active,
+        employee_id=user.employee_id,
     )
 
 
@@ -240,3 +242,140 @@ def change_password(
     user.password_hash = hash_password(payload.new_password)
     db.commit()
     return {"message": "Đổi mật khẩu thành công"}
+
+
+# ─── Helper: yêu cầu ADMIN ───────────────────────────────────────────────────
+def _require_admin(authorization: Optional[str], db: Session) -> AdminUser:
+    user = _get_current_user(authorization, db)
+    if user.role != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chỉ Admin mới có quyền này")
+    return user
+
+
+# ─── GET /users ──────────────────────────────────────────────────────────────
+@router.get("/users", response_model=List[UserOut])
+def list_users(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    _require_admin(authorization, db)
+    users = db.query(AdminUser).order_by(AdminUser.id).all()
+    return [_to_user_out(u) for u in users]
+
+
+# ─── POST /users ─────────────────────────────────────────────────────────────
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    display_name: Optional[str] = None
+    email: Optional[str] = None
+    role: str = "USER"
+    employee_id: Optional[int] = None
+    is_active: bool = True
+
+
+@router.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+def create_user_admin(
+    payload: UserCreate,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    _require_admin(authorization, db)
+    if db.query(AdminUser).filter(AdminUser.username == payload.username).first():
+        raise HTTPException(status_code=400, detail="Username đã tồn tại")
+    if payload.email and db.query(AdminUser).filter(AdminUser.email == payload.email).first():
+        raise HTTPException(status_code=400, detail="Email đã được dùng bởi tài khoản khác")
+
+    new_user = AdminUser(
+        username=payload.username,
+        password_hash=hash_password(payload.password),
+        display_name=payload.display_name or payload.username,
+        email=payload.email,
+        role=payload.role,
+        is_active=payload.is_active,
+        employee_id=payload.employee_id,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return _to_user_out(new_user)
+
+
+# ─── PUT /users/{user_id} ─────────────────────────────────────────────────────
+class UserUpdate(BaseModel):
+    display_name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+    employee_id: Optional[int] = None
+    new_password: Optional[str] = None  # reset mật khẩu nếu có
+
+
+@router.put("/users/{user_id}", response_model=UserOut)
+def update_user_admin(
+    user_id: int,
+    payload: UserUpdate,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    _require_admin(authorization, db)
+    user = db.query(AdminUser).filter(AdminUser.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài khoản")
+
+    if payload.display_name is not None:
+        user.display_name = payload.display_name.strip() or user.display_name
+    if payload.email is not None:
+        existing = db.query(AdminUser).filter(AdminUser.email == payload.email, AdminUser.id != user_id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email đã được dùng bởi tài khoản khác")
+        user.email = payload.email
+    if payload.role is not None:
+        user.role = payload.role
+    if payload.is_active is not None:
+        user.is_active = payload.is_active
+    if payload.employee_id is not None:
+        user.employee_id = payload.employee_id
+    elif "employee_id" in payload.model_fields_set:
+        user.employee_id = None
+    if payload.new_password:
+        if len(payload.new_password) < 6:
+            raise HTTPException(status_code=400, detail="Mật khẩu mới phải có ít nhất 6 ký tự")
+        user.password_hash = hash_password(payload.new_password)
+
+    db.commit()
+    db.refresh(user)
+    return _to_user_out(user)
+
+
+# ─── DELETE /users/{user_id} ──────────────────────────────────────────────────
+@router.delete("/users/{user_id}")
+def delete_user_admin(
+    user_id: int,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    admin = _require_admin(authorization, db)
+    if admin.id == user_id:
+        raise HTTPException(status_code=400, detail="Không thể xóa chính mình")
+    user = db.query(AdminUser).filter(AdminUser.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài khoản")
+    db.delete(user)
+    db.commit()
+    return {"message": "Đã xóa tài khoản"}
+
+
+# ─── GET /employees-list (dùng để chọn khi link tài khoản) ───────────────────
+class EmployeeOption(BaseModel):
+    id: int
+    name: Optional[str] = None
+    email: Optional[str] = None
+    title: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/employees-list", response_model=List[EmployeeOption])
+def list_employees_for_picker(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    _require_admin(authorization, db)
+    employees = db.query(Employee).filter(Employee.status == "active").order_by(Employee.name).all()
+    return [EmployeeOption(id=e.id, name=e.name, email=e.email, title=e.title) for e in employees]
