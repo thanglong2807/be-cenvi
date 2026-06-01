@@ -7,9 +7,10 @@ from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 router = APIRouter(prefix="/easybooks", tags=["EasyBooks"])
 
-BASE    = os.getenv("EASYBOOKS_URL",      "https://portal.easybooks.vn")
-EB_USER = os.getenv("EASYBOOKS_USERNAME", "")
-EB_PASS = os.getenv("EASYBOOKS_PASSWORD", "")
+BASE     = os.getenv("EASYBOOKS_URL",      "https://portal.easybooks.vn")
+EB_USER  = os.getenv("EASYBOOKS_USERNAME", "")
+EB_PASS  = os.getenv("EASYBOOKS_PASSWORD", "")
+HEADLESS = os.getenv("DOCKER", "false").lower() == "true"
 
 
 class CreateAccountPayload(BaseModel):
@@ -33,7 +34,7 @@ def _run_automation(email: str, full_name: str, job: str, password: str) -> str:
     os.makedirs("static/videos", exist_ok=True)
     os.makedirs("static", exist_ok=True)
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, slow_mo=200)
+        browser = p.chromium.launch(headless=HEADLESS, slow_mo=200)
         context = browser.new_context(
             record_video_dir="static/videos/",
             record_video_size={"width": 1280, "height": 800},
@@ -60,46 +61,28 @@ def _run_automation(email: str, full_name: str, job: str, password: str) -> str:
             login_btn.wait_for(state="visible", timeout=5000)
             login_btn.click()
 
-            # ── Bước 2: Chọn công ty KTDV ────────────────────────────────────
-            step = "chọn công ty KTDV"
-            page.wait_for_timeout(5000)
-            page.screenshot(path="static/eb_step2_companies.png")
-
-            # Log toàn bộ clickable elements để debug
-            debug_items = page.evaluate("""() => {
-                const tags = ['button','a','li','div','span']
-                const results = []
-                tags.forEach(tag => {
-                    document.querySelectorAll(tag).forEach(el => {
-                        const t = el.innerText?.trim().substring(0, 60)
-                        if (t && t.length > 1) results.push({ tag, text: t })
-                    })
-                })
-                return results.slice(0, 30)
-            }""")
-            print("[DEBUG] Elements trên trang chọn công ty:", debug_items)
-
-            # Thử tìm bất kỳ element nào chứa text KTDV
-            ktdv = page.locator("*", has_text="KTDV").last
-            try:
-                ktdv.wait_for(state="visible", timeout=8000)
-                ktdv.click()
-            except PWTimeout:
-                raise RuntimeError(
-                    "Không tìm thấy element KTDV trên trang. "
-                    "Kiểm tra screenshot /static/eb_step2_companies.png "
-                    "và video /static/videos/last_session.webm để debug."
-                )
-
-            # ── Bước 3: Xác nhận đăng nhập ───────────────────────────────────
-            step = "xác nhận đăng nhập công ty"
-            confirm_btn = page.get_by_role("button", name="Đăng nhập")
-            confirm_btn.wait_for(state="visible", timeout=10000)
-            confirm_btn.click()
-
-            # Chờ trang dashboard render (Angular SPA — không dùng networkidle)
-            step = "chờ trang chính load"
+            # ── Bước 2: Chờ sau login — tự phát hiện có cần chọn công ty không
+            step = "chờ sau đăng nhập"
             page.wait_for_load_state("load", timeout=15000)
+            page.wait_for_timeout(3000)
+            page.screenshot(path="static/eb_step2_after_login.png")
+
+            # Nếu có trang chọn công ty (có button/element chứa text KTDV) thì chọn
+            ktdv_el = page.locator("*", has_text="KTDV").first
+            if ktdv_el.is_visible():
+                step = "chọn công ty KTDV"
+                ktdv_el.click()
+                # Xác nhận đăng nhập công ty nếu có popup
+                try:
+                    confirm_btn = page.get_by_role("button", name="Đăng nhập")
+                    confirm_btn.wait_for(state="visible", timeout=5000)
+                    confirm_btn.click()
+                    page.wait_for_load_state("load", timeout=15000)
+                    page.wait_for_timeout(2000)
+                except PWTimeout:
+                    pass
+            else:
+                print("[INFO] Không có trang chọn công ty, đã vào dashboard trực tiếp")
 
             # ── Bước 4: Vào Quản lý nhân viên ────────────────────────────────
             step = "click link Quản lý nhân viên"
