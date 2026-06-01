@@ -30,7 +30,7 @@ def _angular_fill(locator, value: str) -> None:
 def _run_automation(email: str, full_name: str, job: str, password: str) -> str:
     step = "khởi động"
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, slow_mo=400)
+        browser = p.chromium.launch(headless=True, slow_mo=200)
         context = browser.new_context()
         page = context.new_page()
         try:
