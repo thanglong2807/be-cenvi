@@ -62,18 +62,34 @@ def _run_automation(email: str, full_name: str, job: str, password: str) -> str:
 
             # ── Bước 2: Chọn công ty KTDV ────────────────────────────────────
             step = "chọn công ty KTDV"
-            # Chờ trang chọn công ty render
-            page.wait_for_timeout(3000)
+            page.wait_for_timeout(5000)
             page.screenshot(path="static/eb_step2_companies.png")
 
-            # Tìm theo tên công ty trước, fallback về index nếu không thấy
-            ktdv_btn = page.locator("button", has_text="KTDV").first
+            # Log toàn bộ clickable elements để debug
+            debug_items = page.evaluate("""() => {
+                const tags = ['button','a','li','div','span']
+                const results = []
+                tags.forEach(tag => {
+                    document.querySelectorAll(tag).forEach(el => {
+                        const t = el.innerText?.trim().substring(0, 60)
+                        if (t && t.length > 1) results.push({ tag, text: t })
+                    })
+                })
+                return results.slice(0, 30)
+            }""")
+            print("[DEBUG] Elements trên trang chọn công ty:", debug_items)
+
+            # Thử tìm bất kỳ element nào chứa text KTDV
+            ktdv = page.locator("*", has_text="KTDV").last
             try:
-                ktdv_btn.wait_for(state="visible", timeout=5000)
-                ktdv_btn.click()
+                ktdv.wait_for(state="visible", timeout=8000)
+                ktdv.click()
             except PWTimeout:
-                print("[WARN] Không tìm thấy button KTDV theo text, thử nth(2)")
-                page.get_by_role("button").nth(2).click(timeout=15000)
+                raise RuntimeError(
+                    "Không tìm thấy element KTDV trên trang. "
+                    "Kiểm tra screenshot /static/eb_step2_companies.png "
+                    "và video /static/videos/last_session.webm để debug."
+                )
 
             # ── Bước 3: Xác nhận đăng nhập ───────────────────────────────────
             step = "xác nhận đăng nhập công ty"
