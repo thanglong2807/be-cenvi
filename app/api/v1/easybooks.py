@@ -86,17 +86,30 @@ def _run_automation(email: str, full_name: str, job: str, password: str) -> str:
 
             # ── Bước 4: Vào Quản lý nhân viên ────────────────────────────────
             step = "click link Quản lý nhân viên"
+            page.wait_for_timeout(2000)
+
+            # Debug: in URL hiện tại và tất cả links trong sidebar
+            print("[DEBUG] URL hiện tại:", page.url)
+            nav_links = page.evaluate("""() => {
+                return Array.from(document.querySelectorAll('a, [routerlink]'))
+                    .map(el => ({ text: el.innerText?.trim().substring(0, 50), href: el.href || el.getAttribute('routerlink') }))
+                    .filter(x => x.text && x.text.length > 1)
+                    .slice(0, 40)
+            }""")
+            print("[DEBUG] Links trên trang:", nav_links)
+            page.screenshot(path="static/eb_step4_dashboard.png")
+
             qln_link = page.get_by_role("link", name="Quản lý nhân viên")
-            # Nếu link chưa visible, thử mở menu cha (Hệ thống / Cài đặt)
+            # Nếu link chưa visible, thử mở menu cha
             try:
-                qln_link.wait_for(state="visible", timeout=10000)
+                qln_link.wait_for(state="visible", timeout=5000)
             except PWTimeout:
-                for parent_name in ["Hệ thống", "Cài đặt", "Quản lý"]:
+                for parent_name in ["Hệ thống", "Cài đặt", "Quản lý", "Nhân viên"]:
                     try:
                         parent = page.get_by_role("link", name=parent_name).first
                         if parent.is_visible():
                             parent.click()
-                            qln_link.wait_for(state="visible", timeout=8000)
+                            qln_link.wait_for(state="visible", timeout=5000)
                             break
                     except PWTimeout:
                         continue
