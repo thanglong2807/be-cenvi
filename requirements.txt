@@ -22,6 +22,7 @@ reportlab==4.2.5
 python-docx>=1.1.0
 docxtpl>=0.16.0
 gunicorn
+playwright>=1.40.0
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1

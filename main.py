@@ -18,6 +18,7 @@ from app.api.v1.company_info import router as company_info_router
 from app.api.v1.sync import router as sync_router
 from app.api.v1.contracts import router as contract_router
 from app.api.v1.admin_auth import router as admin_auth_router
+from app.api.v1.easybooks import router as easybooks_router
 
 # Import Database
 from app.core.database import engine
@@ -151,6 +152,7 @@ app.include_router(company_info_router, prefix="/api/v1")
 app.include_router(sync_router, prefix="/api/v1")
 app.include_router(contract_router, prefix="/api/v1")
 app.include_router(admin_auth_router, prefix="/api/v1")
+app.include_router(easybooks_router, prefix="/api/v1")
 
 # =========================
 # 4. SERVE STATIC FILES (Dashboard HTML)
