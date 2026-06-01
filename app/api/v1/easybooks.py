@@ -28,10 +28,16 @@ def _angular_fill(locator, value: str) -> None:
 
 
 def _run_automation(email: str, full_name: str, job: str, password: str) -> str:
+    import os, time
     step = "khởi động"
+    os.makedirs("static/videos", exist_ok=True)
+    os.makedirs("static", exist_ok=True)
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, slow_mo=200)
-        context = browser.new_context()
+        context = browser.new_context(
+            record_video_dir="static/videos/",
+            record_video_size={"width": 1280, "height": 800},
+        )
         page = context.new_page()
         try:
             # ── Bước 1: Đăng nhập ────────────────────────────────────────────
@@ -54,10 +60,20 @@ def _run_automation(email: str, full_name: str, job: str, password: str) -> str:
             login_btn.wait_for(state="visible", timeout=5000)
             login_btn.click()
 
-            # ── Bước 2: Chọn công ty KTDV (button thứ 3, index=2) ────────────
+            # ── Bước 2: Chọn công ty KTDV ────────────────────────────────────
             step = "chọn công ty KTDV"
-            page.wait_for_timeout(2000)
-            page.get_by_role("button").nth(2).click(timeout=20000)
+            # Chờ trang chọn công ty render
+            page.wait_for_timeout(3000)
+            page.screenshot(path="static/eb_step2_companies.png")
+
+            # Tìm theo tên công ty trước, fallback về index nếu không thấy
+            ktdv_btn = page.locator("button", has_text="KTDV").first
+            try:
+                ktdv_btn.wait_for(state="visible", timeout=5000)
+                ktdv_btn.click()
+            except PWTimeout:
+                print("[WARN] Không tìm thấy button KTDV theo text, thử nth(2)")
+                page.get_by_role("button").nth(2).click(timeout=15000)
 
             # ── Bước 3: Xác nhận đăng nhập ───────────────────────────────────
             step = "xác nhận đăng nhập công ty"
@@ -204,12 +220,27 @@ def _run_automation(email: str, full_name: str, job: str, password: str) -> str:
             return "Tạo tài khoản thành công"
 
         except PWTimeout as e:
+            page.screenshot(path="static/eb_error.png")
             raise RuntimeError(f"[Timeout] Bước '{step}': {e}") from e
         except Exception as e:
+            try:
+                page.screenshot(path="static/eb_error.png")
+            except Exception:
+                pass
             raise RuntimeError(f"[Lỗi] Bước '{step}': {e}") from e
         finally:
-            context.close()
+            video_path = page.video.path() if page.video else None
+            context.close()  # video được lưu khi context đóng
             browser.close()
+            if video_path:
+                # Đổi tên video thành tên cố định để dễ xem
+                import shutil
+                dest = "static/videos/last_session.webm"
+                try:
+                    shutil.move(video_path, dest)
+                    print(f"[VIDEO] Xem tại /static/videos/last_session.webm")
+                except Exception:
+                    pass
 
 
 @router.post("/create-account")
