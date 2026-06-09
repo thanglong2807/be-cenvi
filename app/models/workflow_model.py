@@ -95,6 +95,7 @@ class CompanyTaskFile(Base):
     id          = Column(Integer, primary_key=True, autoincrement=True)
     company_id  = Column(Integer, nullable=False, index=True)
     task_id     = Column(Integer, ForeignKey("workflow_tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    log_id      = Column(Integer, ForeignKey("workflow_task_logs.id", ondelete="CASCADE"), nullable=True, index=True)
     name        = Column(String(300), nullable=False)          # tên hiển thị
     type        = Column(String(10), nullable=False)           # "file" | "link"
     path        = Column(String(500), nullable=True)           # đường dẫn file tĩnh (nếu type=file)

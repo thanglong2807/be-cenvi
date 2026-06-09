@@ -1,11 +1,11 @@
 # app/api/v1/task_files.py
-"""File/link đính kèm theo task của từng công ty."""
+"""File/link đính kèm theo task của từng công ty — hỗ trợ lọc theo log_id (kỳ cụ thể)."""
 
 import os, uuid, mimetypes
 from datetime import datetime
-from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from fastapi.responses import JSONResponse, FileResponse
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -28,6 +28,7 @@ class LinkPayload(BaseModel):
     name: str
     url: str
     uploaded_by: Optional[str] = None
+    log_id: Optional[int] = None
 
 
 def _to_dict(f: CompanyTaskFile, request_base: str = "") -> dict:
@@ -35,6 +36,7 @@ def _to_dict(f: CompanyTaskFile, request_base: str = "") -> dict:
         "id": f.id,
         "company_id": f.company_id,
         "task_id": f.task_id,
+        "log_id": f.log_id,
         "name": f.name,
         "type": f.type,
         "path": f.path,
@@ -47,13 +49,19 @@ def _to_dict(f: CompanyTaskFile, request_base: str = "") -> dict:
 # ── List ──────────────────────────────────────────────────────────────────────
 
 @router.get("/company-info/{company_id}/tasks/{task_id}/files")
-def list_files(company_id: int, task_id: int, db: Session = Depends(get_db)):
-    files = (
-        db.query(CompanyTaskFile)
-        .filter(CompanyTaskFile.company_id == company_id, CompanyTaskFile.task_id == task_id)
-        .order_by(CompanyTaskFile.created_at.desc())
-        .all()
+def list_files(
+    company_id: int,
+    task_id: int,
+    log_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    q = db.query(CompanyTaskFile).filter(
+        CompanyTaskFile.company_id == company_id,
+        CompanyTaskFile.task_id == task_id,
     )
+    if log_id is not None:
+        q = q.filter(CompanyTaskFile.log_id == log_id)
+    files = q.order_by(CompanyTaskFile.created_at.desc()).all()
     return [_to_dict(f) for f in files]
 
 
@@ -65,6 +73,7 @@ async def upload_file(
     task_id: int,
     file: UploadFile = File(...),
     uploaded_by: Optional[str] = Form(None),
+    log_id: Optional[int] = Form(None),
     db: Session = Depends(get_db),
 ):
     ext = os.path.splitext(file.filename or "")[1].lower()
@@ -75,7 +84,9 @@ async def upload_file(
     if len(content) > MAX_SIZE_MB * 1024 * 1024:
         raise HTTPException(status_code=400, detail=f"File quá lớn (tối đa {MAX_SIZE_MB}MB)")
 
-    folder = os.path.join(UPLOAD_DIR, str(company_id), str(task_id))
+    # Lưu theo log_id nếu có, để phân thư mục theo kỳ
+    sub = str(log_id) if log_id else "shared"
+    folder = os.path.join(UPLOAD_DIR, str(company_id), str(task_id), sub)
     os.makedirs(folder, exist_ok=True)
 
     unique_name = f"{uuid.uuid4().hex}{ext}"
@@ -86,6 +97,7 @@ async def upload_file(
     record = CompanyTaskFile(
         company_id=company_id,
         task_id=task_id,
+        log_id=log_id,
         name=file.filename or unique_name,
         type="file",
         path=save_path.replace("\\", "/"),
@@ -108,6 +120,7 @@ def add_link(company_id: int, task_id: int, payload: LinkPayload, db: Session = 
     record = CompanyTaskFile(
         company_id=company_id,
         task_id=task_id,
+        log_id=payload.log_id,
         name=payload.name,
         type="link",
         url=payload.url,
@@ -122,7 +135,6 @@ def add_link(company_id: int, task_id: int, payload: LinkPayload, db: Session = 
 
 # ── Preview (inline) ─────────────────────────────────────────────────────────
 
-# Types that browsers can render natively inline
 INLINE_TYPES = {
     ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
     ".txt", ".csv", ".html",
@@ -142,8 +154,6 @@ def preview_file(file_id: int, db: Session = Depends(get_db)):
     ext = os.path.splitext(record.path)[1].lower()
     mime, _ = mimetypes.guess_type(record.path)
     mime = mime or "application/octet-stream"
-
-    # Với file browser render được → inline; còn lại → attachment (download)
     disposition = "inline" if ext in INLINE_TYPES else "attachment"
 
     return FileResponse(
