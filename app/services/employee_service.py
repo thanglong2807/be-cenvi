@@ -13,6 +13,10 @@ from app.core.security import hash_password
 from app.schemas.employee_schema import EmployeeCreate, EmployeeUpdate, SeedEmployeeResult
 from app.db.repositories.folder_repo import FolderRepository
 from app.services.drive_service import get_drive_service, add_permission, remove_permission_by_email
+from app.core.cache import cache_get, cache_set, cache_delete_prefix
+
+_EMP_CACHE_KEY = "employees:all"
+_EMP_CACHE_TTL = 300  # 5 phút
 
 DEFAULT_EMPLOYEE_PASSWORD = "Cenvi@123"
 
@@ -38,7 +42,12 @@ class EmployeeService:
     # ------------------------------------------------------------------
 
     def get_all(self) -> List[Employee]:
-        return self.db.query(Employee).order_by(Employee.id).all()
+        cached = cache_get(_EMP_CACHE_KEY)
+        if cached is not None:
+            return cached
+        rows = self.db.query(Employee).order_by(Employee.id).all()
+        cache_set(_EMP_CACHE_KEY, rows, ttl=_EMP_CACHE_TTL)
+        return rows
 
     def get_by_id(self, employee_id: int) -> Employee:
         return self._get_or_404(employee_id)
@@ -72,7 +81,8 @@ class EmployeeService:
                 print(f"⚠️ Lỗi tạo Drive folder cho nhân viên: {e}")
 
         self.db.add(obj)
-        self.db.flush()  # lấy obj.id trước khi commit
+        self.db.flush()
+        cache_delete_prefix("employees:")
 
         # Tạo tài khoản đăng nhập cho nhân viên (username = email, pass = Cenvi@123)
         username = data.email.strip().lower()
@@ -108,6 +118,7 @@ class EmployeeService:
         obj.updated_at = datetime.now()
         self.db.commit()
         self.db.refresh(obj)
+        cache_delete_prefix("employees:")
         return obj
 
     def _update_drive_permissions(self, employee_id: int, old_email: str, new_email: str):
@@ -142,6 +153,7 @@ class EmployeeService:
         obj = self._get_or_404(employee_id)
         self.db.delete(obj)
         self.db.commit()
+        cache_delete_prefix("employees:")
 
     # ------------------------------------------------------------------
     # SEED từ employees.json

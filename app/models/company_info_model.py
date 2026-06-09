@@ -16,7 +16,7 @@ class CompanyInfo(Base):
     ma_kh = Column(String(50), nullable=False, unique=True, index=True)  # Mã KH = company_code
     ten_cong_ty = Column(String(500), nullable=False)                     # Tên công ty
     ten_cong_ty_viet_tat = Column(String(200), nullable=True)             # Tên viết tắt – dùng đặt tên folder Drive
-    phu_trach_hien_tai = Column(String(200), nullable=True)               # Tên nhân viên phụ trách
+    phu_trach_hien_tai = Column(String(200), nullable=True, index=True)   # Tên nhân viên phụ trách
 
     # THÔNG TIN TỔNG QUAN
     # ma_so_thue khớp với mst trong folders.json
@@ -65,7 +65,7 @@ class CompanyInfo(Base):
     # HỢP ĐỒNG
     hop_dong_link = Column(String(500), nullable=True)
     hop_dong_ngay_ky = Column(DateTime, nullable=True)
-    hop_dong_loai_kh = Column(String(200), nullable=True)
+    hop_dong_loai_kh = Column(String(200), nullable=True, index=True)
     hop_dong_thanh_toan = Column(String(500), nullable=True)
 
     created_at = Column(DateTime, default=lambda: datetime.now())

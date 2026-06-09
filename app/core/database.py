@@ -4,14 +4,23 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from app.core.config import settings
 
-# DATABASE_URL đã được chuẩn hóa trong settings (hỗ trợ Supabase + SQLite fallback)
 DEFAULT_SQLITE_URL = "sqlite:///./cenvi_audit.db"
 SQLALCHEMY_DATABASE_URL = settings.SQLALCHEMY_DATABASE_URL
 
+# Pool settings cho MySQL — tránh "Too many connections" và connection timeout
+_MYSQL_POOL_KWARGS = {
+    "pool_size": 10,        # số connection thường trực
+    "max_overflow": 20,     # số connection thêm khi pool đầy
+    "pool_timeout": 30,     # giây chờ lấy connection từ pool
+    "pool_recycle": 1800,   # recycle connection sau 30 phút (tránh MySQL 8h timeout)
+    "pool_pre_ping": True,  # kiểm tra connection còn sống trước khi dùng
+}
+
 
 def _build_engine(database_url: str):
-    connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
-    return create_engine(database_url, connect_args=connect_args)
+    if database_url.startswith("sqlite"):
+        return create_engine(database_url, connect_args={"check_same_thread": False})
+    return create_engine(database_url, **_MYSQL_POOL_KWARGS)
 
 
 def _resolve_engine_with_fallback():

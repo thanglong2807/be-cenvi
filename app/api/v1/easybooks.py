@@ -21,11 +21,9 @@ class CreateAccountPayload(BaseModel):
 
 
 def _angular_fill(locator, value: str) -> None:
-    """Fill input trong Angular app: click → clear → gõ từng ký tự để trigger đúng events."""
     locator.click()
-    locator.select_text()
-    locator.press_sequentially(value, delay=60)
-    locator.press("Tab")  # blur để trigger validation
+    locator.fill(value)
+    locator.press("Tab")
 
 
 def _run_automation(email: str, full_name: str, job: str, password: str) -> str:
@@ -61,49 +59,36 @@ def _run_automation(email: str, full_name: str, job: str, password: str) -> str:
             login_btn.wait_for(state="visible", timeout=5000)
             login_btn.click()
 
-            # ── Bước 2: Chờ sau login — tự phát hiện có cần chọn công ty không
-            step = "chờ sau đăng nhập"
+            # ── Bước 2: Chọn công ty (button thứ 3 trên trang auth-home) ─────
+            step = "chờ trang chọn công ty"
             page.wait_for_load_state("load", timeout=15000)
-            page.wait_for_timeout(3000)
-            page.screenshot(path="static/eb_step2_after_login.png")
+            # Chờ đủ 3 button xuất hiện (2 nav + 1 company card trở lên)
+            page.wait_for_function("() => document.querySelectorAll('button').length >= 3", timeout=20000)
 
-            # Nếu có trang chọn công ty (có button/element chứa text KTDV) thì chọn
-            ktdv_el = page.locator("*", has_text="KTDV").first
-            if ktdv_el.is_visible():
-                step = "chọn công ty KTDV"
-                ktdv_el.click()
-                # Xác nhận đăng nhập công ty nếu có popup
-                try:
-                    confirm_btn = page.get_by_role("button", name="Đăng nhập")
-                    confirm_btn.wait_for(state="visible", timeout=5000)
-                    confirm_btn.click()
-                    page.wait_for_load_state("load", timeout=15000)
-                    page.wait_for_timeout(2000)
-                except PWTimeout:
-                    pass
-            else:
-                print("[INFO] Không có trang chọn công ty, đã vào dashboard trực tiếp")
+            step = "chọn công ty (button thứ 3)"
+            page.get_by_role("button").nth(2).click()
+
+            # ── Bước 3: Xác nhận đăng nhập công ty ───────────────────────────
+            step = "xác nhận đăng nhập công ty"
+            confirm_btn = page.get_by_role("button", name="Đăng nhập")
+            confirm_btn.wait_for(state="visible", timeout=10000)
+            confirm_btn.click()
+            page.wait_for_load_state("load", timeout=15000)
 
             # ── Bước 4: Vào Quản lý nhân viên ────────────────────────────────
             step = "click link Quản lý nhân viên"
-            page.wait_for_timeout(2000)
-
-            # Debug: in URL hiện tại và tất cả links trong sidebar
-            print("[DEBUG] URL hiện tại:", page.url)
-            nav_links = page.evaluate("""() => {
-                return Array.from(document.querySelectorAll('a, [routerlink]'))
-                    .map(el => ({ text: el.innerText?.trim().substring(0, 50), href: el.href || el.getAttribute('routerlink') }))
-                    .filter(x => x.text && x.text.length > 1)
-                    .slice(0, 40)
-            }""")
-            print("[DEBUG] Links trên trang:", nav_links)
-            page.screenshot(path="static/eb_step4_dashboard.png")
-
             qln_link = page.get_by_role("link", name="Quản lý nhân viên")
-            # Nếu link chưa visible, thử mở menu cha
             try:
-                qln_link.wait_for(state="visible", timeout=5000)
+                qln_link.wait_for(state="visible", timeout=8000)
             except PWTimeout:
+                # Log sidebar để debug
+                nav_links = page.evaluate("""() => {
+                    return Array.from(document.querySelectorAll('a, [routerlink]'))
+                        .map(el => ({ text: el.innerText?.trim().substring(0, 50), href: el.getAttribute('routerlink') || el.href }))
+                        .filter(x => x.text && x.text.length > 1).slice(0, 40)
+                }""")
+                print("[DEBUG] URL:", page.url, "| Links:", nav_links)
+                page.screenshot(path="static/eb_step4_dashboard.png")
                 for parent_name in ["Hệ thống", "Cài đặt", "Quản lý", "Nhân viên"]:
                     try:
                         parent = page.get_by_role("link", name=parent_name).first

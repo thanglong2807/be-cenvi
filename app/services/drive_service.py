@@ -1,6 +1,7 @@
 # File: app/services/drive_service.py
 
 import os
+import threading
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
@@ -8,21 +9,42 @@ from googleapiclient.discovery import build
 SCOPES = ['https://www.googleapis.com/auth/drive']
 SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
 
+# Singleton: tạo 1 lần, dùng lại cho toàn bộ process (thread-safe)
+_drive_service = None
+_drive_service_lock = threading.Lock()
+
 
 def get_drive_service():
     """
-    Khởi tạo Google Drive Service sử dụng Service Account
+    Trả về Google Drive Service singleton — khởi tạo 1 lần duy nhất.
+    Thread-safe qua Lock.
     """
-    creds_path = SERVICE_ACCOUNT_FILE
-    if not creds_path or not os.path.exists(creds_path):
-        raise FileNotFoundError(f"Không tìm thấy file credentials tại: {creds_path}. Hãy kiểm tra file .env")
+    global _drive_service
+    if _drive_service is not None:
+        return _drive_service
 
-    creds = service_account.Credentials.from_service_account_file(
-        creds_path, 
-        scopes=SCOPES
-    )
-    service = build('drive', 'v3', credentials=creds)
-    return service
+    with _drive_service_lock:
+        if _drive_service is not None:
+            return _drive_service
+
+        creds_path = SERVICE_ACCOUNT_FILE or os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
+        if not creds_path or not os.path.exists(creds_path):
+            raise FileNotFoundError(f"Không tìm thấy file credentials tại: {creds_path}. Hãy kiểm tra file .env")
+
+        creds = service_account.Credentials.from_service_account_file(
+            creds_path,
+            scopes=SCOPES
+        )
+        _drive_service = build('drive', 'v3', credentials=creds)
+
+    return _drive_service
+
+
+def reset_drive_service():
+    """Dùng khi cần force re-init (ví dụ: đổi credentials)."""
+    global _drive_service
+    with _drive_service_lock:
+        _drive_service = None
 
 
 def browse_drive_folder(drive_folder_id: str):

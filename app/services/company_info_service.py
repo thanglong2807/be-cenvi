@@ -14,9 +14,13 @@ from app.schemas.company_info_schema import CompanyInfoCreate, CompanyInfoUpdate
 from app.services.drive_service import get_drive_service, add_permission, find_shortcuts_by_target_id
 from app.services.drive_folder_builder import apply_template
 from app.core.folder_templates import FOLDER_TEMPLATES
+from app.core.cache import cache_get, cache_set, cache_delete_prefix
 
 DRIVE_FOLDER_BASE = "https://drive.google.com/drive/folders/"
 ROOT_DRIVE_FOLDER_ID = os.getenv("ROOT_DRIVE_FOLDER_ID") or os.getenv("COMPANY_PARENT_FOLDER_ID")
+
+_CACHE_PREFIX = "company_info:"
+_CACHE_TTL = 120  # 2 phút
 
 
 def _build_drive_link(folder_id: Optional[str]) -> Optional[str]:
@@ -53,6 +57,11 @@ class CompanyInfoService:
     # ------------------------------------------------------------------
 
     def get_all(self, skip: int = 0, limit: int = 100) -> List[dict]:
+        cache_key = f"{_CACHE_PREFIX}all:{skip}:{limit}"
+        cached = cache_get(cache_key)
+        if cached is not None:
+            return cached
+
         rows = (
             self.db.query(CompanyInfo)
             .order_by(CompanyInfo.created_at.desc())
@@ -60,12 +69,22 @@ class CompanyInfoService:
             .limit(limit)
             .all()
         )
-        return [self._enrich(r) for r in rows]
+        result = [self._enrich(r) for r in rows]
+        cache_set(cache_key, result, ttl=_CACHE_TTL)
+        return result
 
     def get_by_id(self, company_id: int) -> dict:
-        return self._enrich(self._get_or_404(company_id))
+        cache_key = f"{_CACHE_PREFIX}id:{company_id}"
+        cached = cache_get(cache_key)
+        if cached is not None:
+            return cached
+
+        result = self._enrich(self._get_or_404(company_id))
+        cache_set(cache_key, result, ttl=_CACHE_TTL)
+        return result
 
     def search(self, keyword: str, skip: int = 0, limit: int = 100) -> List[dict]:
+        # Search không cache vì keyword biến động
         kw = f"%{keyword}%"
         rows = (
             self.db.query(CompanyInfo)
@@ -127,6 +146,7 @@ class CompanyInfoService:
         self.db.add(obj)
         self.db.commit()
         self.db.refresh(obj)
+        cache_delete_prefix(_CACHE_PREFIX)
         return self._enrich(obj)
 
     def _create_drive_folder(
@@ -315,6 +335,7 @@ class CompanyInfoService:
         obj.updated_at = datetime.now()
         self.db.commit()
         self.db.refresh(obj)
+        cache_delete_prefix(_CACHE_PREFIX)
         return self._enrich(obj)
 
     def delete(self, company_id: int, delete_drive_folder: bool = True) -> dict:
@@ -389,6 +410,7 @@ class CompanyInfoService:
         # Xoá từ database
         self.db.delete(obj)
         self.db.commit()
+        cache_delete_prefix(_CACHE_PREFIX)
 
         return {
             'status': 'success',
@@ -485,6 +507,13 @@ class CompanyInfoService:
         updated = 0
         errors: list[str] = []
 
+        # Build lookup map để tránh N+1 queries
+        existing_map = {
+            c.ma_kh: c
+            for c in self.db.query(CompanyInfo).all()
+        }
+
+        now = datetime.now()
         for folder in folders:
             company_code = (folder.company_code or "").strip()
             if not company_code:
@@ -494,20 +523,18 @@ class CompanyInfoService:
             phu_trach = employee_map.get(folder.manager_employee_id) if folder.manager_employee_id else None
 
             try:
-                existing = self.get_by_ma_kh(company_code)
+                existing = existing_map.get(company_code)
 
                 if existing:
-                    # Cập nhật các trường từ folders
                     existing.folder_year     = folder.year
                     existing.folder_template = folder.template or None
                     existing.folder_status   = folder.status or None
                     existing.drive_folder_id = folder.root_folder_id or existing.drive_folder_id
                     if phu_trach:
                         existing.phu_trach_hien_tai = phu_trach
-                    existing.updated_at = datetime.now()
+                    existing.updated_at = now
                     updated += 1
                 else:
-                    now = datetime.now()
                     obj = CompanyInfo(
                         ma_kh=company_code,
                         ten_cong_ty=folder.company_name or company_code,
@@ -521,14 +548,19 @@ class CompanyInfoService:
                         updated_at=now,
                     )
                     self.db.add(obj)
+                    existing_map[company_code] = obj  # tránh duplicate trong cùng batch
                     created += 1
 
-                self.db.flush()
             except Exception as e:
-                self.db.rollback()
                 errors.append(f"{company_code}: {str(e)}")
 
-        self.db.commit()
+        try:
+            self.db.commit()
+            cache_delete_prefix(_CACHE_PREFIX)
+        except Exception as e:
+            self.db.rollback()
+            errors.append(f"Commit lỗi: {str(e)}")
+
         return SeedResult(
             total_folders=len(folders),
             created=created,
@@ -561,15 +593,28 @@ class CompanyInfoService:
             'error_details': []
         }
 
+        # Load tất cả công ty hiện tại vào memory để tránh N+1 queries
+        all_ma_kh = set(
+            row[0] for row in self.db.query(CompanyInfo.ma_kh).all()
+        )
+        existing_map = {
+            c.ma_kh: c
+            for c in self.db.query(CompanyInfo).filter(
+                CompanyInfo.ma_kh.in_([
+                    (d.get('ma_to_chuc') or d.get('ma_kh') or '').strip()
+                    for d in companies_data
+                ])
+            ).all()
+        }
+
+        now = datetime.now()
         for idx, company_data in enumerate(companies_data, 1):
             try:
-                # Extract fields với nhiều tên khác nhau
                 ma_kh = company_data.get('ma_to_chuc') or company_data.get('ma_kh')
                 ten_cong_ty = company_data.get('ten_to_chuc') or company_data.get('ten_cong_ty')
                 ma_so_thue = company_data.get('ma_so_thue')
                 phu_trach = company_data.get('nguoi_phu_trach') or company_data.get('phu_trach_hien_tai')
 
-                # Validate bắt buộc
                 if not ma_kh or not ma_kh.strip():
                     result['errors'] += 1
                     result['error_details'].append(f"Row {idx}: Thiếu mã tổ chức (ma_to_chuc/ma_kh)")
@@ -584,21 +629,17 @@ class CompanyInfoService:
                 ten_cong_ty = ten_cong_ty.strip()
                 ma_so_thue = ma_so_thue.strip() if ma_so_thue else None
 
-                # Kiểm tra công ty đã tồn tại
-                existing = self.get_by_ma_kh(ma_kh)
+                existing = existing_map.get(ma_kh)
 
                 if existing:
-                    # Cập nhật công ty hiện tại
                     existing.ten_cong_ty = ten_cong_ty
                     if ma_so_thue:
                         existing.ma_so_thue = ma_so_thue
                     if phu_trach and phu_trach.strip():
                         existing.phu_trach_hien_tai = phu_trach.strip()
-                    existing.updated_at = datetime.now()
+                    existing.updated_at = now
                     result['updated'] += 1
                 else:
-                    # Tạo công ty mới
-                    now = datetime.now()
                     company = CompanyInfo(
                         ma_kh=ma_kh,
                         ten_cong_ty=ten_cong_ty,
@@ -608,14 +649,19 @@ class CompanyInfoService:
                         updated_at=now
                     )
                     self.db.add(company)
+                    existing_map[ma_kh] = company  # tránh duplicate trong batch
                     result['created'] += 1
 
-                self.db.flush()
-
             except Exception as e:
-                self.db.rollback()
                 result['errors'] += 1
                 result['error_details'].append(f"Row {idx}: {str(e)}")
 
-        self.db.commit()
+        try:
+            self.db.commit()
+            cache_delete_prefix(_CACHE_PREFIX)
+        except Exception as e:
+            self.db.rollback()
+            result['errors'] += 1
+            result['error_details'].append(f"Commit lỗi: {str(e)}")
+
         return result

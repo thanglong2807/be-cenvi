@@ -170,6 +170,32 @@ def seed_accounts_from_employees(db: Session = Depends(get_db)):
     )
 
 
+# ─── POST /refresh-token ─────────────────────────────────────────────────────
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+@router.post("/refresh-token", response_model=TokenResponse)
+def refresh_token(payload: RefreshRequest, db: Session = Depends(get_db)):
+    """Dùng refresh_token để lấy access_token mới."""
+    token_data = decode_token(payload.refresh_token)
+    if not token_data:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token không hợp lệ hoặc đã hết hạn")
+
+    user = db.query(AdminUser).filter(AdminUser.id == int(token_data["sub"])).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Tài khoản không tồn tại hoặc đã bị khóa")
+
+    new_access = create_access_token({"sub": str(user.id), "username": user.username})
+    new_refresh = create_refresh_token({"sub": str(user.id), "username": user.username})
+
+    return TokenResponse(
+        access_token=new_access,
+        refresh_token=new_refresh,
+        user=_to_user_out(user),
+    )
+
+
 # ─── Helper: lấy user từ Authorization header ────────────────────────────────
 def _get_current_user(authorization: Optional[str], db: Session) -> AdminUser:
     if not authorization or not authorization.startswith("Bearer "):

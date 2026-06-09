@@ -19,11 +19,13 @@ from app.api.v1.sync import router as sync_router
 from app.api.v1.contracts import router as contract_router
 from app.api.v1.admin_auth import router as admin_auth_router
 from app.api.v1.easybooks import router as easybooks_router
+from app.api.v1.workflow import router as workflow_router
+from app.api.v1.task_files import router as task_files_router
 
 # Import Database
 from app.core.database import engine
 # Import Models để tạo bảng
-from app.models import audit, document_model, work_link_model, company_info_model, employee_model, folder_model, contract_model, admin_user_model
+from app.models import audit, document_model, work_link_model, company_info_model, employee_model, folder_model, contract_model, admin_user_model, workflow_model
 
 # Import Services
 from app.services.dashboard_sheet_service import dashboard_service
@@ -101,6 +103,12 @@ company_info_model.Base.metadata.create_all(bind=engine)
 employee_model.Base.metadata.create_all(bind=engine)
 contract_model.Base.metadata.create_all(bind=engine)
 admin_user_model.Base.metadata.create_all(bind=engine)
+workflow_model.Base.metadata.create_all(bind=engine)
+# Tạo bảng company_task_files nếu chưa có (create_all bỏ qua bảng đã tồn tại)
+from app.models.workflow_model import CompanyTaskFile as _CTF
+_CTF.__table__.create(bind=engine, checkfirst=True)
+from app.models.notification_model import Base as _notif_base, Notification as _Notif
+_notif_base.metadata.create_all(bind=engine, checkfirst=True)
 
 # Migration: thêm cột employee_id nếu chưa có
 from sqlalchemy import text as _text
@@ -109,7 +117,40 @@ with engine.connect() as _conn:
         _conn.execute(_text("ALTER TABLE admin_users ADD COLUMN employee_id INT NULL DEFAULT NULL"))
         _conn.commit()
     except Exception:
-        pass  # Cột đã tồn tại
+        pass
+    try:
+        _conn.execute(_text("ALTER TABLE workflow_tasks ADD COLUMN frequency VARCHAR(20) NOT NULL DEFAULT 'monthly'"))
+        _conn.commit()
+    except Exception:
+        pass
+    try:
+        _conn.execute(_text("ALTER TABLE workflow_tasks ADD COLUMN automation_type VARCHAR(20) NOT NULL DEFAULT 'manual'"))
+        _conn.commit()
+    except Exception:
+        pass
+    try:
+        _conn.execute(_text("ALTER TABLE workflow_tasks ADD COLUMN automation_note TEXT NULL"))
+        _conn.commit()
+    except Exception:
+        pass
+    try:
+        _conn.execute(_text("ALTER TABLE workflow_tasks ADD COLUMN automation_status VARCHAR(20) NOT NULL DEFAULT 'pending_script'"))
+        _conn.commit()
+    except Exception:
+        pass
+    # workflow_task_logs: period + review fields
+    for _col_sql in [
+        "ALTER TABLE workflow_task_logs ADD COLUMN period VARCHAR(20) NOT NULL DEFAULT ''",
+        "ALTER TABLE workflow_task_logs ADD COLUMN review_status VARCHAR(20) NULL",
+        "ALTER TABLE workflow_task_logs ADD COLUMN reviewed_by VARCHAR(200) NULL",
+        "ALTER TABLE workflow_task_logs ADD COLUMN reviewed_at DATETIME NULL",
+        "ALTER TABLE workflow_task_logs ADD COLUMN review_note TEXT NULL",
+    ]:
+        try:
+            _conn.execute(_text(_col_sql))
+            _conn.commit()
+        except Exception:
+            pass
 
 # =========================
 # 1. CẤU HÌNH CORS
@@ -153,6 +194,8 @@ app.include_router(sync_router, prefix="/api/v1")
 app.include_router(contract_router, prefix="/api/v1")
 app.include_router(admin_auth_router, prefix="/api/v1")
 app.include_router(easybooks_router, prefix="/api/v1")
+app.include_router(workflow_router, prefix="/api/v1")
+app.include_router(task_files_router, prefix="/api/v1")
 
 # =========================
 # 4. SERVE STATIC FILES (Dashboard HTML)
