@@ -713,7 +713,7 @@ class WorkflowService:
         ).all()
 
         total = len(logs)
-        done = sum(1 for l in logs if l.status in ("done", "skipped"))
+        done = sum(1 for l in logs if l.status in ("approved", "waiting_review"))
         pct = round(done / total * 100, 1) if total else 0.0
 
         return {
